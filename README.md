@@ -11,7 +11,7 @@ Given a set of data and labels, train a model to classify data. Project assignme
 ## Scripts
 
 * [Data Visualization](scripts/datavis.py) - Visualize two features against each other
-* [Statistics](scripts/stats.py) - Generate and print summary statistics of a specified feature
+* [Statistics](scripts/stats.py) - [docs](docs/stats.md) - Generate and print summary statistics of a specified feature
 * [Submission](scripts/classifyall.py) - The submission script that will execute the classification of data using our trained model
 
 ## Task Status
