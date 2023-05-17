@@ -2,7 +2,7 @@
 
 ## Details
 
-Given a set of data and labels, train a model to classify data. Project assignment document can be found in [here](/docs/2023 assignment 2.pdf)
+Given a set of data and labels, train a model to classify data. Project assignment document can be found in [here](docs/2023 assignment 2.pdf)
 
 ## Members
 
