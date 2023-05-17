@@ -17,6 +17,6 @@ Given a set of data and labels, train a model to classify data. Project assignme
 ## Task Status
 
 - [ ] Data Visualization
-- [ ] Statistics
+- [x] Statistics
 - [ ] Submission
 - [ ] Training
