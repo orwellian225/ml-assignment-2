@@ -3,7 +3,7 @@ import argparse as agp
 import numpy as np
 import data_ops as do
 
-def calc_summary_stats(feature_matrix: np.array, feature: int) -> Dict[str, Union[float, int]]:
+def calc_summary_stats_feature(feature_matrix: np.array, feature: int) -> Dict[str, Union[float, int]]:
     feature_values = feature_matrix[:, feature]
     return {
         "Mean": np.mean(feature_values),
@@ -15,7 +15,7 @@ def calc_summary_stats(feature_matrix: np.array, feature: int) -> Dict[str, Unio
         "Range": np.max(feature_values) - np.min(feature_values)
     }
 
-def calc_summary_stats(feature_matrix: np.array) -> Dict[str, np.array]:
+def calc_summary_stats_all(feature_matrix: np.array) -> Dict[str, np.array]:
     result = {
         "Mean": [],
         "Median": [],
@@ -48,9 +48,9 @@ def main():
     matrix, _ = do.read_labelled_data(args.data_filepath, args.labels_filepath, show_log=True)
 
     if args.feature == -1:
-        stats = calc_summary_stats(matrix)
+        stats = calc_summary_stats_all(matrix)
     else:
-        stats = calc_summary_stats(matrix, args.feature)
+        stats = calc_summary_stats_feature(matrix, args.feature)
 
     print(f"Statistics for feature {args.feature}")
     for stat_name in stats.keys():
