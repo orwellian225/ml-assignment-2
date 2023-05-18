@@ -1,32 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import argparse as agp
 import data_ops as do
 
 label_colours = [
-    "#ff0000",
-    "#00ff00",
-    "#0000ff",
-    "#ffff00",
-    "#ff00ff",
-    "#00ffff",
-    "#ffa500",
-    "#00a5ff",
-    "#2f4f4f",
-    "#000000",
-]
-
-label_shapes = [
-    "D",
-    "o",
-    "v",
-    "^",
-    "<",
-    ">",
-    "1",
-    "s",
-    "*",
-    "2",
+    "xkcd:red",
+    "xkcd:green",
+    "xkcd:blue",
+    "xkcd:pink",
+    "xkcd:purple",
+    "xkcd:salmon",
+    "xkcd:dark teal",
+    "xkcd:tangerine",
+    "xkcd:brown",
+    "xkcd:black",
 ]
 
 
@@ -34,12 +22,11 @@ def compare_features(feature_matrix: np.array, label_vector: np.array, feature_1
 
     if feature_1 == feature_2:
         feat_vals = feature_matrix[:, feature_1]
-        plt.hist(feat_vals, bins=bin_count)
+        N, bins, patches = plt.hist(feat_vals, bins=bin_count, histtype="bar", stacked=True)
     else:
         feat1_vals = feature_matrix[:, feature_1]
         feat2_vals = feature_matrix[:, feature_2]
-        for i in range(len(feat1_vals)):
-            plt.scatter(feat1_vals[i], feat2_vals[i], color=label_colours[label_vector[i]], marker=label_shapes[label_vector[i]])
+        plt.scatter(feat1_vals, feat2_vals, c=label_vector, cmap=mpl.colors.ListedColormap(label_colours))
 
     if save_graph:
         # Save the save
