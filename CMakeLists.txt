@@ -10,6 +10,7 @@ add_subdirectory(lib/eigen)
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE ${PROJECT_SOURCE_DIR}/include
+    PUBLIC lib/toml/include
     PUBLIC lib/fmt/include
     PUBLIC ${EIGEN_INCLUDE_DIR}
 )
