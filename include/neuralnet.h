@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -19,8 +20,7 @@ struct nnlayer_t {
     Eigen::MatrixXd weights;
 
 
-    template<typename activationFunction>
-    Eigen::VectorXd fprop_layer(Eigen::VectorXd input, activationFunction activate_f);
+    Eigen::VectorXd fprop_layer(Eigen::VectorXd input, std::function<double(double)> activate_f);
 
     void print();
 };

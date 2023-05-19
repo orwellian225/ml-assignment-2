@@ -2,6 +2,7 @@
 
 #include <fmt/core.h>
 #include <Eigen/Dense>
+#include <Eigen/Core>
 
 #include "neuralnet.h"
 
@@ -24,9 +25,20 @@ nnlayer_t init_layer(size_t in_count, size_t out_count) {
     };
 }
 
+Eigen::VectorXd nnlayer_t::fprop_layer(Eigen::VectorXd input, std::function<double(double)> activate_f) {
+    Eigen::VectorXd input_with_bias(input.size() + 1);
+    Eigen::Vector<double, 1> bias(1.0);
+    input_with_bias << bias, input; 
+
+    Eigen::VectorXd result = this->weights * input_with_bias;
+    result = result.unaryExpr(activate_f);
+
+    return result;
+}
+
 void nnlayer_t::print() {
     fmt::print(
-        "Network Layer:\nInput neuron count {}\nOutput neuron count {}\nWeights\n{}",
+        "Network Layer:\nInput neuron count {}\nOutput neuron count {}\nWeights\n{}\n",
         this->input_count, this->output_count, this->weights
     );
 }
