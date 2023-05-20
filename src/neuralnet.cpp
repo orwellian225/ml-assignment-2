@@ -6,12 +6,12 @@
 
 #include "neuralnet.h"
 
-nnlayer_t init_layer(size_t in_count, size_t out_count) {
+nnlayer_t init_layer(size_t layer_id, size_t in_count, size_t out_count) {
     Eigen::MatrixXd weights(out_count, in_count + 1);
 
     std::random_device rd;
     std::mt19937 rng(rd());
-    std::uniform_real_distribution<> uniform_dist(0.0, 2.0);
+    std::uniform_real_distribution<> uniform_dist(0.0, 10.0);
 
     for (size_t i = 0; i < in_count + 1; ++i) {
         for (size_t j = 0; j < out_count; ++j) {
@@ -20,7 +20,7 @@ nnlayer_t init_layer(size_t in_count, size_t out_count) {
     }
 
     return nnlayer_t {
-        in_count, out_count,
+        layer_id, in_count, out_count,
         weights
     };
 }
@@ -47,7 +47,7 @@ nn_t init_network(std::vector<size_t> network_structure) {
     std::vector<nnlayer_t> layers;
 
     for (size_t l = 1; l < network_structure.size(); ++l) {
-        nnlayer_t new_layer = init_layer(network_structure[l-1], network_structure[l]);
+        nnlayer_t new_layer = init_layer(l-1, network_structure[l-1], network_structure[l]);
         layers.push_back(new_layer);
     }
 
@@ -63,11 +63,16 @@ nn_t init_network(std::vector<size_t> network_structure) {
 }
 
 Eigen::MatrixXd nn_t::fprop_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
-    Eigen::MatrixXd activation_matrix(layer_count, max_layer_nodes);
+    Eigen::MatrixXd activation_matrix(max_layer_nodes, layer_count);
 
-    activation_matrix.row(0) = input;
+    const size_t initial_input_neuron_count = input.size();
+    activation_matrix.block(0, 0, initial_input_neuron_count, 1) = input;
     for (size_t l = 1; l < layer_count; ++l) {
-        activation_matrix.row(l) = layers[l].fprop_layer(activation_matrix.row(l - 1), activate_f);
+        const size_t input_neuron_count = layers[l - 1].input_count;
+        const size_t output_neuron_count = layers[l - 1].output_count;
+
+        Eigen::VectorXd fprop_result = layers[l - 1].fprop_layer(activation_matrix.block(0, l - 1, input_neuron_count, 1), activate_f);
+        activation_matrix.block(0, l, output_neuron_count, 1) = fprop_result;
     }
 
     return activation_matrix;
@@ -75,7 +80,8 @@ Eigen::MatrixXd nn_t::fprop_network(const Eigen::VectorXd& input, std::function<
 
 Eigen::VectorXd nn_t::eval_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
     Eigen::MatrixXd activation_matrix = fprop_network(input, activate_f);
-    return activation_matrix.row(layer_count - 1);
+    const size_t output_neuron_count = layers[layers.size() - 1].output_count;
+    return activation_matrix.block(0, layer_count - 1, output_neuron_count, 1);
 }
 
 Eigen::VectorXd nn_t::eval_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f, std::function<Eigen::VectorXd(Eigen::VectorXd)> classify_f) {

@@ -16,16 +16,17 @@ struct fmt::formatter<
     char>> : ostream_formatter {};
 
 struct nnlayer_t {
-    size_t input_count;
-    size_t output_count;
-    Eigen::MatrixXd weights;
+  size_t layer_id;
+  size_t input_count;
+  size_t output_count;
+  Eigen::MatrixXd weights;
 
-    Eigen::VectorXd fprop_layer(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f);
+  Eigen::VectorXd fprop_layer(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f);
 
-    void print();
+  void print();
 };
 
-nnlayer_t init_layer(size_t in_count, size_t out_count);
+nnlayer_t init_layer(size_t layer_id, size_t in_count, size_t out_count);
 
 struct nn_t {
   std::vector<size_t> structure;
