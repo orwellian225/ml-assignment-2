@@ -1,9 +1,19 @@
 import data_ops as do
 import numpy as np
+import json
+
 
 features, labels = do.read_labelled_data("./data/small_data.txt", "./data/small_labels.txt")
 
-weights = do.read_labelled_data()
+file = open('data/weights.json')
+data = json.load(file)
+
+weights = []
+for i in data['weights']:
+    weights.append(i)
+
+print(weights)
+
 
 
 # initialises weight matrix for NN
