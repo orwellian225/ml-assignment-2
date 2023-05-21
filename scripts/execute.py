@@ -10,33 +10,9 @@ data = json.load(file)
 
 weights = []
 for i in data['weights']:
-    weights.append(i)
+    weights.append(np.array(i))
 
 print(weights)
-
-
-
-# initialises weight matrix for NN
-# layer_node_count: no. of nodes in current layer
-# next_node_count: no. of nodes in next later
-def init_layer(layer_node_count, next_code_count):
-    weight_matrix = []
-    for i in range(next_code_count):
-        row = []
-        for j in range(layer_node_count + 1): # additional weight for bias term
-            row.append() # get weights from a file(not sure)
-        weight_matrix.append(np.array(row))
-
-
-# initialises NN by creating and initialising weight matrices for each layer
-# layer_counts: no. of nodes in each layer of network
-def init_network(layer_counts):
-    layers = []
-    for i in range(len(layer_counts) - 1): # -1: last index -> output layer
-        layers.append(init_layer(layer_counts[i], layer_counts[i + 1]))
-
-    return np.array(layers)
-
 
 # Forward propagation for a given slice of NN
 # Returns output vector of the network until the last layer of the provided slice
