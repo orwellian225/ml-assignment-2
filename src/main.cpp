@@ -86,7 +86,11 @@ void execute_training() {
     data_file.close();
     label_file.close();
 
-    // Current Network Spec Info
+    std::vector<size_t> structure{71, 10};
+    nn_t network = init_network(structure);
+
+    auto activation_sig = [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return 1.0 / (1.0 + std::exp(-x)); }); };
+    fmt::println("{}", network.eval_network_perf(spec.data.label_count, data, labels, activation_sig));
 
 }
 

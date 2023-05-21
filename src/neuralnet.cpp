@@ -1,6 +1,10 @@
 #include <random>
+#include <string>
+#include <vector>
+#include <array>
 
 #include <fmt/core.h>
+#include <fmt/color.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
@@ -11,7 +15,7 @@ nnlayer_t init_layer(size_t layer_id, size_t in_count, size_t out_count) {
 
     std::random_device rd;
     std::mt19937 rng(rd());
-    std::uniform_real_distribution<> uniform_dist(0.0, 10.0);
+    std::uniform_real_distribution<> uniform_dist(-1.0, 1.0);
 
     for (size_t i = 0; i < in_count + 1; ++i) {
         for (size_t j = 0; j < out_count; ++j) {
@@ -62,6 +66,18 @@ nn_t init_network(std::vector<size_t> network_structure) {
     };
 }
 
+Eigen::VectorXd label_to_vector(size_t label, size_t num_labels) {
+    Eigen::VectorXd result(num_labels);
+    result(label) = 1;
+    return result;
+}
+
+size_t vector_to_label(const Eigen::VectorXd& label_vec) {
+    size_t max_i;
+    label_vec.maxCoeff(&max_i);
+    return max_i;
+}
+
 Eigen::MatrixXd nn_t::fprop_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
     Eigen::MatrixXd activation_matrix(max_layer_nodes, layer_count);
 
@@ -87,6 +103,35 @@ Eigen::VectorXd nn_t::eval_network(const Eigen::VectorXd& input, std::function<E
 Eigen::VectorXd nn_t::eval_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f, std::function<Eigen::VectorXd(Eigen::VectorXd)> classify_f) {
     Eigen::VectorXd activation_result = eval_network(input, activate_f);
     return classify_f(activation_result);
+}
+
+std::string nn_t::eval_network_perf(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
+    std::string result = fmt::format(fg(fmt::color::teal), "\nNetwork Performance\n----------------------------------------------------------------\n");
+
+    Eigen::MatrixXi confusion_matrix = Eigen::MatrixXi::Constant(label_count, label_count, 0);
+    size_t total_count = data.rows();
+    size_t correct_count = 0;
+
+    for (size_t i = 0; i < data.rows(); ++i) {
+        Eigen::VectorXd row = data.row(i);
+        Eigen::VectorXd nn_result = eval_network(row, activate_f);
+        size_t result_class = vector_to_label(nn_result);
+        confusion_matrix((size_t)labels(i), result_class) += 1;
+    }
+
+    for (size_t i = 0; i < label_count; ++i) {
+        correct_count += confusion_matrix(i,i);
+    }
+    double accuracy = (double)(correct_count) / (double)(total_count) * 100.0;
+
+    result += fmt::format(fg(fmt::color::gold), "Confusion Matrix\n");
+    result += fmt::format("{}", confusion_matrix);
+    result += "\n";
+
+    result += fmt::format(fg(fmt::color::gold), "Accuracy "); 
+    result += fmt::format("{} %\n", accuracy);
+    result += fmt::format(fg(fmt::color::teal), "----------------------------------------------------------------\n");
+    return result;
 }
 
 void nn_t::print() {
