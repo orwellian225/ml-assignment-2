@@ -1,0 +1,15 @@
+name = "All Data for testing"
+author = "Brendan Griffiths"
+
+[data]
+data_file = "data\\training_data.txt"
+label_file = "data\\training_labels.txt"
+feature_count = 71
+label_count = 10
+size = 10000
+
+[network]
+structure = [71, 10]
+
+[network.hyperparameters]
+learning_rates = [0.01, 0.1, 0.2, 0.5]

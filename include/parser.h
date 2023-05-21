@@ -15,6 +15,7 @@ struct nnspec_t {
         std::filesystem::path label_file;
         size_t feature_count;
         size_t label_count;
+        size_t size;
     } data;
 
     struct {

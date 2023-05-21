@@ -16,6 +16,7 @@ nnspec_t load_network_spec(toml::table network_spec) {
     std::filesystem::path label_file(data_node["label_file"].value<std::string>().value_or("NO_LABELS"));
     size_t feature_count = data_node["feature_count"].value<size_t>().value_or(0);
     size_t label_count = data_node["label_count"].value<size_t>().value_or(0);
+    size_t size = data_node["size"].value<size_t>().value_or(0);
 
     auto network_node = network_spec["network"];
     auto structure_arr = network_node["structure"].as_array();
@@ -38,7 +39,8 @@ nnspec_t load_network_spec(toml::table network_spec) {
             data_file,
             label_file,
             feature_count,
-            label_count
+            label_count,
+            size
         },
         { structure, { learning_rates } }
     };
@@ -50,10 +52,15 @@ nnspec_t load_network_spec_from_file(std::filesystem::path filepath) {
 }
 
 void nnspec_t::print_spec_info() {
-    fmt::print("\x1B[2J\x1b[H"); // Clear the terminal
+    fmt::println("");
     fmt::print(fg(fmt::color::green), "Network "); fmt::print("{}\n", name);
     fmt::print(fg(fmt::color::green), "================================================================\n");
     fmt::print(fg(fmt::color::orange), "Structure "); fmt::print("{}\n", fmt::join(network.structure, " "));
     fmt::print(fg(fmt::color::orange), "Data "); fmt::print("{}\n", data.data_file.string());
     fmt::print(fg(fmt::color::orange), "Labels "); fmt::print("{}\n", data.label_file.string());
+    fmt::print(fg(fmt::color::orange), "Data size "); fmt::println("{}", data.size);
+    fmt::print(fg(fmt::color::orange), "Feature count "); fmt::println("{}", data.feature_count);
+    fmt::print(fg(fmt::color::orange), "Label count "); fmt::println("{}", data.label_count);
+    fmt::print(fg(fmt::color::green), "================================================================\n");
+    fmt::println("");
 }
