@@ -105,36 +105,54 @@ Eigen::VectorXd nn_t::eval_network(const Eigen::VectorXd& input, std::function<E
     return classify_f(activation_result);
 }
 
-std::string nn_t::eval_network_perf(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
-    std::string result = fmt::format(fg(fmt::color::teal), "\nNetwork Performance\n----------------------------------------------------------------\n");
-
+// Row is the correct label, column is the guessed label
+Eigen::MatrixXi nn_t::calc_confusion_matrix(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
     Eigen::MatrixXi confusion_matrix = Eigen::MatrixXi::Constant(label_count, label_count, 0);
-    size_t total_count = data.rows();
-    size_t correct_count = 0;
-
     for (size_t i = 0; i < data.rows(); ++i) {
-        Eigen::VectorXd row = data.row(i);
-        Eigen::VectorXd nn_result = eval_network(row, activate_f);
-        size_t result_class = vector_to_label(nn_result);
-        confusion_matrix((size_t)labels(i), result_class) += 1;
+        const Eigen::VectorXd& row = data.row(i);
+        Eigen::VectorXd nn_evaluation = eval_network(row, activate_f);
+        size_t evaluation_label = vector_to_label(nn_evaluation);
+        confusion_matrix((size_t)labels(i), evaluation_label) += 1;
     }
 
-    for (size_t i = 0; i < label_count; ++i) {
-        correct_count += confusion_matrix(i,i);
-    }
-    double accuracy = (double)(correct_count) / (double)(total_count) * 100.0;
-
-    result += fmt::format(fg(fmt::color::gold), "Confusion Matrix\n");
-    result += fmt::format("{}", confusion_matrix);
-    result += "\n";
-
-    result += fmt::format(fg(fmt::color::gold), "Accuracy "); 
-    result += fmt::format("{} %\n", accuracy);
-    result += fmt::format(fg(fmt::color::teal), "----------------------------------------------------------------\n");
-    return result;
+    return confusion_matrix;
 }
 
-void nn_t::print() {
+Eigen::VectorXd nn_t::calc_label_accuracy(const Eigen::MatrixXi& confusion_matrix) {
+    Eigen::VectorXd label_accuracies = Eigen::VectorXd::Constant(confusion_matrix.rows(), 0.0);
+    for (size_t i = 0; i < confusion_matrix.rows(); ++i) {
+        int32_t num_label_evalutions = confusion_matrix.row(i).sum();
+        int32_t correct_label_evaluations = confusion_matrix.row(i)(i);
+        label_accuracies(i) = (double) correct_label_evaluations / (double) num_label_evalutions * 100.0;
+    }
+
+    return label_accuracies;
+}
+
+double nn_t::calc_accuracy(const Eigen::MatrixXi& confusion_matrix) {
+    int32_t num_evaluations = confusion_matrix.sum();
+    int32_t correct_evaluations = 0;
+    for (size_t i = 0; i < confusion_matrix.rows(); ++i) {
+        correct_evaluations += confusion_matrix(i, i);
+    }
+
+    return (double)correct_evaluations / (double)num_evaluations * 100.0;
+}
+
+void nn_t::print_perf(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
+    fmt::print(fg(fmt::color::green), "\nNetwork Performance\n================================================================\n");
+
+    Eigen::MatrixXi confusion_matrix = calc_confusion_matrix(label_count, data, labels, activate_f);
+    Eigen::VectorXd label_accuracy = calc_label_accuracy(confusion_matrix);
+    double accuracy = calc_accuracy(confusion_matrix);
+
+    fmt::print(fg(fmt::color::orange), "Confusion Matrix\n"); fmt::print("{}\n", confusion_matrix);
+    fmt::print(fg(fmt::color::orange), "\nClass Accuracy\n"); fmt::print("{}\n", label_accuracy);
+    fmt::print(fg(fmt::color::orange), "\nOverall Accuracy "); fmt::print("{:.2f} %\n", accuracy);
+    fmt::print(fg(fmt::color::green), "================================================================\n");
+}
+
+void nn_t::print_description() {
     fmt::print("Neural Network:\n");
     fmt::print("Network Structure: ({})\n", fmt::join(structure, " "));
     fmt::print("Network Layers:\n");

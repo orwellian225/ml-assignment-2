@@ -41,9 +41,13 @@ struct nn_t {
   // Mostly going to be used to reduce a ReLU output to a class vector via softmax or sigmoid
   Eigen::VectorXd eval_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f, std::function<Eigen::VectorXd(Eigen::VectorXd)> classify_f);
 
-  std::string eval_network_perf(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f);
-
-  void print();
+  // Performance Measurement
+  Eigen::MatrixXi calc_confusion_matrix(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f);
+  Eigen::VectorXd calc_label_accuracy(const Eigen::MatrixXi& confusion_matrix);
+  double calc_accuracy(const Eigen::MatrixXi& confusion_matrix);
+  
+  void print_perf(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f);
+  void print_description();
 };
 
 nn_t init_network(std::vector<size_t> network_structure);

@@ -90,7 +90,7 @@ void execute_training() {
     nn_t network = init_network(structure);
 
     auto activation_sig = [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return 1.0 / (1.0 + std::exp(-x)); }); };
-    fmt::println("{}", network.eval_network_perf(spec.data.label_count, data, labels, activation_sig));
+    network.print_perf(spec.data.label_count, data, labels, activation_sig);
 
 }
 
