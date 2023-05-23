@@ -1,6 +1,10 @@
 #include <random>
+#include <string>
+#include <vector>
+#include <array>
 
 #include <fmt/core.h>
+#include <fmt/color.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
@@ -11,7 +15,7 @@ nnlayer_t init_layer(size_t layer_id, size_t in_count, size_t out_count) {
 
     std::random_device rd;
     std::mt19937 rng(rd());
-    std::uniform_real_distribution<> uniform_dist(0.0, 10.0);
+    std::uniform_real_distribution<> uniform_dist(-1.0, 1.0);
 
     for (size_t i = 0; i < in_count + 1; ++i) {
         for (size_t j = 0; j < out_count; ++j) {
@@ -62,6 +66,18 @@ nn_t init_network(std::vector<size_t> network_structure) {
     };
 }
 
+Eigen::VectorXd label_to_vector(size_t label, size_t num_labels) {
+    Eigen::VectorXd result(num_labels);
+    result(label) = 1;
+    return result;
+}
+
+size_t vector_to_label(const Eigen::VectorXd& label_vec) {
+    size_t max_i;
+    label_vec.maxCoeff(&max_i);
+    return max_i;
+}
+
 Eigen::MatrixXd nn_t::fprop_network(const Eigen::VectorXd& input, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
     Eigen::MatrixXd activation_matrix(max_layer_nodes, layer_count);
 
@@ -89,7 +105,54 @@ Eigen::VectorXd nn_t::eval_network(const Eigen::VectorXd& input, std::function<E
     return classify_f(activation_result);
 }
 
-void nn_t::print() {
+// Row is the correct label, column is the guessed label
+Eigen::MatrixXi nn_t::calc_confusion_matrix(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
+    Eigen::MatrixXi confusion_matrix = Eigen::MatrixXi::Constant(label_count, label_count, 0);
+    for (size_t i = 0; i < data.rows(); ++i) {
+        const Eigen::VectorXd& row = data.row(i);
+        Eigen::VectorXd nn_evaluation = eval_network(row, activate_f);
+        size_t evaluation_label = vector_to_label(nn_evaluation);
+        confusion_matrix((size_t)labels(i), evaluation_label) += 1;
+    }
+
+    return confusion_matrix;
+}
+
+Eigen::VectorXd nn_t::calc_label_accuracy(const Eigen::MatrixXi& confusion_matrix) {
+    Eigen::VectorXd label_accuracies = Eigen::VectorXd::Constant(confusion_matrix.rows(), 0.0);
+    for (size_t i = 0; i < confusion_matrix.rows(); ++i) {
+        int32_t num_label_evalutions = confusion_matrix.row(i).sum();
+        int32_t correct_label_evaluations = confusion_matrix.row(i)(i);
+        label_accuracies(i) = (double) correct_label_evaluations / (double) num_label_evalutions * 100.0;
+    }
+
+    return label_accuracies;
+}
+
+double nn_t::calc_accuracy(const Eigen::MatrixXi& confusion_matrix) {
+    int32_t num_evaluations = confusion_matrix.sum();
+    int32_t correct_evaluations = 0;
+    for (size_t i = 0; i < confusion_matrix.rows(); ++i) {
+        correct_evaluations += confusion_matrix(i, i);
+    }
+
+    return (double)correct_evaluations / (double)num_evaluations * 100.0;
+}
+
+void nn_t::print_perf(size_t label_count, const Eigen::MatrixXd& data, const Eigen::VectorXd labels, std::function<Eigen::VectorXd(Eigen::VectorXd)> activate_f) {
+    fmt::print(fg(fmt::color::green), "\nNetwork Performance\n================================================================\n");
+
+    Eigen::MatrixXi confusion_matrix = calc_confusion_matrix(label_count, data, labels, activate_f);
+    Eigen::VectorXd label_accuracy = calc_label_accuracy(confusion_matrix);
+    double accuracy = calc_accuracy(confusion_matrix);
+
+    fmt::print(fg(fmt::color::orange), "Confusion Matrix\n"); fmt::print("{}\n", confusion_matrix);
+    fmt::print(fg(fmt::color::orange), "\nClass Accuracy\n"); fmt::print("{}\n", label_accuracy);
+    fmt::print(fg(fmt::color::orange), "\nOverall Accuracy "); fmt::print("{:.2f} %\n", accuracy);
+    fmt::print(fg(fmt::color::green), "================================================================\n");
+}
+
+void nn_t::print_description() {
     fmt::print("Neural Network:\n");
     fmt::print("Network Structure: ({})\n", fmt::join(structure, " "));
     fmt::print("Network Layers:\n");

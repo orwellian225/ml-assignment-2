@@ -1,0 +1,15 @@
+name = "Small Data for testing"
+author = "Brendan Griffiths"
+
+[data]
+data_file = "data\\small_data.txt"
+label_file = "data\\small_labels.txt"
+feature_count = 71
+label_count = 10
+size = 10
+
+[network]
+structure = [71, 100, 80, 50, 20, 10]
+
+[network.hyperparameters]
+learning_rates = [0.01, 0.1, 0.2, 0.5]
