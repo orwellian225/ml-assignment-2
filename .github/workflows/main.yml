@@ -1,0 +1,16 @@
+name: Submission Testing
+
+on: [ push ]
+
+jobs:
+  Test-Submission:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: eWaterCycle/setup-apptainer@v2.0.0
+      with:
+        apptainer-version: 1.1.2
+    - name: Run apptainer container
+      run: singularity run https://lamp.ms.wits.ac.za/ml/ral.sif
+    - name: Run classifyall script
+      run: python scripts/classifyall.py
