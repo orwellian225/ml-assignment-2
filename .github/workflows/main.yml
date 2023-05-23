@@ -11,6 +11,6 @@ jobs:
       with:
         apptainer-version: 1.1.2
     - name: Run apptainer container
-      run: singularity run https://lamp.ms.wits.ac.za/ml/ral.sif
+      run: singularity run https://lamp.ms.wits.ac.za/ml/rail.sif
     - name: Run classifyall script
       run: python scripts/classifyall.py
