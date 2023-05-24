@@ -6,8 +6,15 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
+#include <fmt/ostream.h>
 
 typedef std::function<Eigen::VectorXd(const Eigen::VectorXd&)> NetworkFunc;
+
+template <typename T>
+struct fmt::formatter<
+  T,
+  std::enable_if_t<
+    std::is_base_of_v<Eigen::DenseBase<T>, T>, char>> : ostream_formatter {};
 
 class NeuralNetwork {
     public:

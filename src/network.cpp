@@ -10,11 +10,6 @@
 
 #include "network.h"
 
-// template <typename T>
-// struct fmt::formatter<
-//   T,
-//   std::enable_if_t<
-//     std::is_base_of_v<Eigen::DenseBase<T>, T>, char>> : ostream_formatter {};
 
 NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc classify_f, double learning_rate, double regularisation_rate, std::vector<size_t> using_features) {
     // Assign
@@ -86,10 +81,10 @@ Eigen::VectorXd NeuralNetwork::calc_label_accuracy(const Eigen::MatrixXi& confus
 }
 
 double NeuralNetwork::calc_network_accuracy(const Eigen::MatrixXi& confusion_matrix) {
-    int32_t num_evaluations = confusion_matrix.sum();
-    int32_t num_correct_evaluations = confusion_matrix.diagonal().sum();
+    double num_evaluations = (double)confusion_matrix.sum();
+    double num_correct_evaluations = (double)confusion_matrix.diagonal().sum();
 
-    return (double)num_evaluations / (double)num_correct_evaluations * 100.0;
+    return num_correct_evaluations / num_evaluations * 100.0;
 }
 
 void NeuralNetwork::print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
@@ -116,8 +111,8 @@ void NeuralNetwork::print_perf(const Eigen::MatrixXd& data, const Eigen::VectorX
     Eigen::VectorXd label_accuracy = calc_label_accuracy(confusion_matrix);
     double accuracy = calc_network_accuracy(confusion_matrix);
 
-    // fmt::print(fg(fmt::color::orange), "Confusion Matrix\n"); fmt::print("{}\n", confusion_matrix);
-    // fmt::print(fg(fmt::color::orange), "\nClass Accuracy\n"); fmt::print("{}\n", label_accuracy);
+    fmt::print(fg(fmt::color::orange), "Confusion Matrix\n"); fmt::print("{}\n", confusion_matrix);
+    fmt::print(fg(fmt::color::orange), "\nClass Accuracy\n"); fmt::print("{}\n", label_accuracy);
     fmt::print(fg(fmt::color::orange), "\nOverall Accuracy "); fmt::print("{:.2f} %\n", accuracy);
 }
 
