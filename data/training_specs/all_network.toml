@@ -10,6 +10,9 @@ size = 10000
 
 [network]
 structure = [71, 10]
+activation_f = "Linear"
+classification_f = "Softmax"
 
 [network.hyperparameters]
 learning_rates = [0.01, 0.1, 0.2, 0.5]
+regularisation_rates = [0.2]

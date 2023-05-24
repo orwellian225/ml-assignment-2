@@ -10,7 +10,6 @@
 
 #include "network.h"
 
-
 NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc classify_f, double learning_rate, double regularisation_rate, std::vector<size_t> using_features) {
     // Assign
     this->spec_id = spec_id;
