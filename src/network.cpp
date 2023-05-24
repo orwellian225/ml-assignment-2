@@ -86,6 +86,23 @@ double NeuralNetwork::calc_network_accuracy(const Eigen::MatrixXi& confusion_mat
     return num_correct_evaluations / num_evaluations * 100.0;
 }
 
+void NeuralNetwork::serialize(const std::filesystem::path filepath) {
+    auto filename = filepath/(fmt::format("{}-alpha{}-lambda{}.nnw", spec_id, learning_rate, regularisation_rate));
+    FILE* nnw_file = fopen(filename.string().c_str(), "w");
+    fmt::println(nnw_file, "{}", fmt::join(structure, ","));
+
+    for (auto weight_m: weights) {
+        for (size_t i = 0; i < weight_m.rows(); ++i) {
+            for (size_t j = 0; j < weight_m.cols(); ++j) {
+                fmt::print(nnw_file, "{},", weight_m(i, j));
+            }
+            fmt::print(nnw_file, "\n");
+        }
+    }
+
+    fclose(nnw_file);
+}
+
 void NeuralNetwork::print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
     print_info();
     print_perf(data, labels);

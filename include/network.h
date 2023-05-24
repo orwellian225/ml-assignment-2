@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <vector>
@@ -50,6 +51,8 @@ class NeuralNetwork {
         Eigen::MatrixXi calc_confusion_matrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
         Eigen::VectorXd calc_label_accuracy(const Eigen::MatrixXi& confusion_matrix);
         double calc_network_accuracy(const Eigen::MatrixXi& confusion_matrix);
+
+        void serialize(const std::filesystem::path filepath);
 
         void print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
         void print_info();
