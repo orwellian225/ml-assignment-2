@@ -86,6 +86,10 @@ double NeuralNetwork::calc_network_accuracy(const Eigen::MatrixXi& confusion_mat
     return num_correct_evaluations / num_evaluations * 100.0;
 }
 
+void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
+    return;
+}
+
 void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
     auto filename = filepath/(fmt::format("{}-{}-alpha{}-lambda{}.nnw", spec_id, name, learning_rate, regularisation_rate));
     FILE* nnw_file = fopen(filename.string().c_str(), "w");

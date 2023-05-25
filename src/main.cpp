@@ -88,5 +88,5 @@ void test_refactor() {
     label_file.close();
 
     spec.create_networks();
-    spec.print_networks();
+    spec.train_networks(data, labels);
 }

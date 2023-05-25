@@ -121,6 +121,40 @@ void NeuralNetworkSpecification::create_networks() {
     }
 }
 
+void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
+    const size_t num_networks = networks.size();
+    const size_t num_data = data.rows();
+
+    const size_t size_training_data = num_data * 0.8;
+    const size_t size_validation_data = num_data * 0.1;
+    const size_t size_testing_data = num_data * 0.1;
+
+    assert(size_training_data + size_validation_data + size_testing_data == num_data);
+
+    const Eigen::MatrixXd& training_data = data.block(0, 0, size_training_data, num_features); 
+    const Eigen::VectorXd& training_labels = labels.block(0, 0, size_training_data, 1); 
+
+    const Eigen::MatrixXd& validation_data = data.block(size_training_data, 0, size_validation_data, num_features);
+    const Eigen::VectorXd& validation_labels = labels.block(size_training_data, 0, size_validation_data, 1);
+
+    const Eigen::MatrixXd& testing_data = data.block(size_training_data + size_validation_data, 0, size_testing_data, num_features);
+    const Eigen::VectorXd& testing_labels = labels.block(size_training_data + size_validation_data, 0, size_testing_data, 1);
+
+    std::vector<Eigen::MatrixXi> network_confusion_matricies(num_networks);
+    std::vector<double> network_accuracies(num_networks);
+
+    for (size_t i = 0; i < num_networks; ++i) {
+        networks[i].train(training_data, training_labels);
+        network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
+        network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
+    }
+
+    fmt::println("Network Performance");
+    for (size_t i = 0; i < num_networks; ++i) {
+        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].learning_rate, networks[i].regularisation_rate, network_accuracies[i]);
+    }
+}
+
 void NeuralNetworkSpecification::print_info() {
     fmt::print(fg(fmt::color::green), "Network "); fmt::print("{}\n", name);
     fmt::print(fg(fmt::color::green), "================================================================\n");

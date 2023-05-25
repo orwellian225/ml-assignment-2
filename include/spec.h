@@ -47,6 +47,7 @@ class NeuralNetworkSpecification {
         NeuralNetworkSpecification(toml::table spec_file);
 
         void create_networks();
+        void train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
 
         void print_all();
         void print_info();
