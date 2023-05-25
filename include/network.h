@@ -52,7 +52,7 @@ class NeuralNetwork {
         Eigen::VectorXd calc_label_accuracy(const Eigen::MatrixXi& confusion_matrix);
         double calc_network_accuracy(const Eigen::MatrixXi& confusion_matrix);
 
-        void serialize(const std::filesystem::path filepath);
+        void serialize(const std::filesystem::path filepath, const std::string name);
 
         void print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
         void print_info();
