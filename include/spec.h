@@ -17,9 +17,16 @@ typedef std::function<Eigen::VectorXd(const Eigen::VectorXd&)> NetworkFunc;
 
 static const std::unordered_map<std::string, NetworkFunc> network_functions = {
     {"LINEAR", [](const Eigen::VectorXd& values) { return values; }},
-    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0 ? x : 0 ; }); }},
+    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0.0 ? x : 0.0 ; }); }},
     {"LOGISTIC", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return 1.0 / (1.0 + std::exp(-x)); }); }},
     {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.array().exp() / values.array().exp().sum(); }},
+};
+
+static const std::unordered_map<std::string, NetworkFunc> network_functions_derivative = {
+    {"LINEAR", [](const Eigen::VectorXd& values) { return Eigen::VectorXd::Constant(values.size(), 1); }},
+    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0.0 ? 1.0 : 0.0 ; }); }},
+    {"LOGISTIC", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
+    {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
 };
 
 class NeuralNetworkSpecification {

@@ -10,15 +10,15 @@
 
 #include "network.h"
 
-NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc classify_f, double learning_rate, double regularisation_rate, std::vector<size_t> using_features) {
+NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, NetworkFunc classify_f, double learning_rate, double regularisation_rate) {
     // Assign
     this->spec_id = spec_id;
     this->structure = structure;
     this->activate_f = activate_f;
     this->classify_f = classify_f;
+    this->activate_fprime = activate_fprime;
     this->learning_rate = learning_rate;
     this->regularisation_rate = regularisation_rate;
-    this->using_features = using_features;
 
     // Calculate the network dimensions
     this->layer_count = structure.size();
@@ -35,32 +35,6 @@ NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure,
 }
 NeuralNetwork::~NeuralNetwork() {}
 
-Eigen::MatrixXd NeuralNetwork::fprop(const Eigen::VectorXd& input) {
-    Eigen::MatrixXd activations = Eigen::MatrixXd::Constant(max_layer_nodes, layer_count, 0);
-
-    activations.block(0, 0, num_features, 1) = input;
-    for (size_t l = 1; l < layer_count; ++l) {
-        const size_t input_neuron_count = weights[l - 1].cols() - 1; // Remove the bias
-        const size_t output_neuron_count = weights[l - 1].rows();
-
-        const Eigen::VectorXd& input = activations.block(0, l - 1, input_neuron_count, 1);
-        activations.block(0, l, output_neuron_count, 1) = fprop_layer(input, l - 1);
-    }
-
-    // Apply the classification function to the last column of the activation matrix
-    activations.block(0, layer_count - 1, num_labels, 1) = classify_f(activations.block(0, layer_count - 1, num_labels, 1));
-
-    return activations;
-}
-
-Eigen::MatrixXd NeuralNetwork::bprop(const Eigen::VectorXd& input, size_t correct_label) {
-    return Eigen::MatrixXd::Constant(1, 1, 0);
-}
-
-size_t NeuralNetwork::eval(const Eigen::VectorXd& input) {
-    Eigen::MatrixXd activations = fprop(input);
-    return label_vec_to_int(activations.block(0, layer_count - 1, num_labels, 1));
-}
 
 Eigen::MatrixXi NeuralNetwork::calc_confusion_matrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
     Eigen::MatrixXi confusion = Eigen::MatrixXi::Constant(num_labels, num_labels, 0);
@@ -86,8 +60,66 @@ double NeuralNetwork::calc_network_accuracy(const Eigen::MatrixXi& confusion_mat
     return num_correct_evaluations / num_evaluations * 100.0;
 }
 
-void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
-    return;
+size_t NeuralNetwork::eval(const Eigen::VectorXd& input) {
+    std::vector<Eigen::VectorXd> activations = fprop(input);
+    return label_vec_to_int(activations.back());
+}
+
+void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, const size_t num_epochs) {
+    const size_t batch_size = 1000;
+    const double convergance_criteria = 1e-6;
+
+    std::vector<Eigen::MatrixXd> gradients(layer_count - 1);
+    for (size_t i = 0; i < layer_count - 1; ++i) {
+        gradients[i] = Eigen::MatrixXd::Constant(weights[i].rows(), weights[i].cols(), 0);
+    }
+
+    bool converged = false;
+    for (size_t epoch = 0; epoch < num_epochs; ++epoch) {
+
+        for (size_t i = 0; i < data.rows(); ++i) {
+            const Eigen::VectorXd& point = data.row(i);
+            std::vector<Eigen::VectorXd> activations = fprop(point);
+            std::vector<Eigen::VectorXd> errors = bprop(activations, labels(i));
+
+            // Determine gradients
+            const Eigen::Vector<double, 1> bias(1.0);
+            for (size_t ii = 0; ii < layer_count - 1; ++ii) {
+                Eigen::VectorXd activation_with_bias(activations[ii].size() + 1);
+                activation_with_bias << bias, activations[ii];
+                gradients[ii] += errors[ii + 1] * activation_with_bias.transpose();
+            }
+
+            if (i % batch_size == 0) {
+                converged = true;
+                for (size_t ii = 0; ii < layer_count - 1; ++ii) {
+                    const Eigen::MatrixXd& prev_weights = gradients[ii];
+
+                    // Regularise everything except bias weights
+                    gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / batch_size + regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
+
+                    // Normalise the bias
+                    gradients[ii].row(0) /= batch_size;
+                    
+                    // Applying update
+                    weights[ii] -= learning_rate * gradients[ii];
+
+                    // Reset gradients
+                    gradients[ii] = Eigen::MatrixXd::Constant(weights[ii].rows(), weights[ii].cols(), 0);
+
+                    converged = converged && (weights[ii] - prev_weights).norm() < convergance_criteria;
+                }
+
+                if (converged) {
+                    break;
+                }
+            } 
+        }
+
+        if (converged) {
+            break;
+        }
+    }
 }
 
 void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
@@ -154,4 +186,36 @@ size_t NeuralNetwork::label_vec_to_int(const Eigen::VectorXd& vec) {
     size_t max_i;
     vec.maxCoeff(&max_i);
     return max_i;
+}
+
+std::vector<Eigen::VectorXd> NeuralNetwork::fprop(const Eigen::VectorXd& input) {
+    std::vector<Eigen::VectorXd> activations(layer_count);
+
+    activations[0] = input;
+    for (size_t l = 1; l < layer_count; ++l) {
+        const size_t input_neuron_count = weights[l - 1].cols() - 1; // Remove the bias
+        const size_t output_neuron_count = weights[l - 1].rows();
+
+        const Eigen::VectorXd& input = activations[l - 1];
+        activations[l] = fprop_layer(input, l - 1);
+    }
+
+    // Apply the classification function to the last column of the activation matrix
+    activations.back() = classify_f(activations.back());
+
+    return activations;
+}
+
+std::vector<Eigen::VectorXd> NeuralNetwork::bprop(const std::vector<Eigen::VectorXd>& activations, size_t correct_label) {
+    std::vector<Eigen::VectorXd> errors(layer_count);
+    Eigen::VectorXd label_vec = label_int_to_vec(correct_label);
+    errors.back() = activations.back().array() - label_vec.array();
+
+    for (size_t i = errors.size(); i --> 1;) {
+        const Eigen::MatrixXd& unbiased_weights = weights[i - 1].block(0, 1, weights[i - 1].rows(), weights[i - 1].cols() - 1); 
+        Eigen::MatrixXd product = unbiased_weights.transpose() * errors[i];
+        errors[i - 1] = product.array() * activate_fprime(activations[i - 1]).array();
+    }
+
+    return errors;
 }
