@@ -13,6 +13,7 @@
 #include <toml++/toml.h>
 
 #include "spec.h"
+#include "network.h"
 
 NeuralNetworkSpecification::NeuralNetworkSpecification() {
     id = "No ID";
@@ -30,6 +31,8 @@ NeuralNetworkSpecification::NeuralNetworkSpecification() {
     regularisation_rates = std::vector<double>(0);
     activation_function = "NONE";
     classification_function = "NONE";
+
+    networks = std::vector<NeuralNetwork>(0);
 }
 
 NeuralNetworkSpecification::NeuralNetworkSpecification(std::filesystem::path spec_filepath) {
@@ -56,7 +59,7 @@ NeuralNetworkSpecification::NeuralNetworkSpecification(std::filesystem::path spe
 
     auto regularisation_rates_toml = spec_file["network"]["hyperparameters"]["regularisation_rates"].as_array();
     for (size_t i = 0; i < regularisation_rates_toml->size(); ++i) {
-        learning_rates.push_back(regularisation_rates_toml->get_as<double>(i)->value_or(0.0));
+        regularisation_rates.push_back(regularisation_rates_toml->get_as<double>(i)->value_or(0.0));
     }
 
     activation_function = spec_file["network"]["activation_f"].value<std::string>().value_or("Linear");
@@ -88,13 +91,34 @@ NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
 
     auto regularisation_rates_toml = spec_file["network"]["hyperparameters"]["regularisation_rates"].as_array();
     for (size_t i = 0; i < regularisation_rates_toml->size(); ++i) {
-        learning_rates.push_back(regularisation_rates_toml->get_as<double>(i)->value_or(0.0));
+        regularisation_rates.push_back(regularisation_rates_toml->get_as<double>(i)->value_or(0.0));
     }
 
     activation_function = spec_file["network"]["activation_f"].value<std::string>().value_or("Linear");
     classification_function = spec_file["network"]["classification_f"].value<std::string>().value_or("Linear");
     std::transform(activation_function.begin(), activation_function.end(), activation_function.begin(), ::toupper);
     std::transform(classification_function.begin(), classification_function.end(), classification_function.begin(), ::toupper);
+}
+
+void NeuralNetworkSpecification::create_networks() {
+    const size_t num_networks = learning_rates.size() * regularisation_rates.size();
+
+    size_t learning_idx = 0;
+    size_t regularisation_idx = 0;
+    for (size_t i = 0; i < num_networks; ++i) {
+        networks.push_back(
+            NeuralNetwork(id, structure, network_functions.at(activation_function), network_functions.at(classification_function), learning_rates[learning_idx], regularisation_rates[regularisation_idx])
+        );
+
+        ++learning_idx;
+        if (learning_idx == learning_rates.size()) {
+            learning_idx = 0;
+            ++regularisation_idx;
+        }
+        if (regularisation_idx == regularisation_rates.size()) {
+            regularisation_idx = 0;
+        }
+    }
 }
 
 void NeuralNetworkSpecification::print_info() {
@@ -108,5 +132,17 @@ void NeuralNetworkSpecification::print_info() {
     fmt::print(fg(fmt::color::orange), "Label count "); fmt::println("{}", num_labels);
     fmt::print(fg(fmt::color::orange), "Activation function "); fmt::println("{}", activation_function);
     fmt::print(fg(fmt::color::orange), "Classification function "); fmt::println("{}", classification_function);
-    fmt::print(fg(fmt::color::green), "================================================================\n");
+    fmt::print(fg(fmt::color::orange), "Hyperparameters\n");
+    fmt::print(fg(fmt::color::gold), "\tLearning Rates "); fmt::println("{}", fmt::join(learning_rates, " "));
+    fmt::print(fg(fmt::color::gold), "\tRegularisation Rates "); fmt::println("{}", fmt::join(regularisation_rates, " "));
+    fmt::print(fg(fmt::color::green), "----------------------------------------------------------------\n");
+}
+
+void NeuralNetworkSpecification::print_networks() {
+    fmt::print(fg(fmt::color::green), "----------------------------------------------------------------\n");
+    for (auto network: networks) { 
+        fmt::print(fg(fmt::color::green), "{:^64}\n", "--------");
+        network.print_info(); 
+    }
+    fmt::print(fg(fmt::color::green), "----------------------------------------------------------------\n");
 }

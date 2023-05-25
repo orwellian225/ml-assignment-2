@@ -87,8 +87,6 @@ void test_refactor() {
     data_file.close();
     label_file.close();
 
-    std::vector<size_t> test_structure = {71, 15, 10, 10};
-    NeuralNetwork test_nn("No Spec", test_structure, [](const Eigen::VectorXd& values) { return values; }, 0.1);
-    test_nn.print_info();
-    test_nn.serialize(std::filesystem::path("data\\saved_nn"));
+    spec.create_networks();
+    spec.print_networks();
 }

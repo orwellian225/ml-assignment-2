@@ -11,6 +11,8 @@
 #include <Eigen/Dense>
 #include <toml++/toml.h>
 
+#include "network.h"
+
 typedef std::function<Eigen::VectorXd(const Eigen::VectorXd&)> NetworkFunc;
 
 static const std::unordered_map<std::string, NetworkFunc> network_functions = {
@@ -38,9 +40,13 @@ class NeuralNetworkSpecification {
         std::string activation_function;
         std::string classification_function;
 
+        std::vector<NeuralNetwork> networks;
+
         NeuralNetworkSpecification();
         NeuralNetworkSpecification(std::filesystem::path spec_filepath);
         NeuralNetworkSpecification(toml::table spec_file);
+
+        void create_networks();
 
         void print_all();
         void print_info();
