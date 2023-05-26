@@ -33,13 +33,8 @@ class NeuralNetworkSpecification {
         std::vector<NeuralNetwork> networks;
 
         NeuralNetworkSpecification();
-        NeuralNetworkSpecification(std::filesystem::path spec_filepath);
         NeuralNetworkSpecification(toml::table spec_file);
 
         void create_networks();
         void train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
-
-        void print_all();
-        void print_info();
-        void print_networks();
 };

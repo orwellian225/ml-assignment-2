@@ -9,13 +9,13 @@ label_count = 10
 size = 10000
 
 [network]
-structure = [71, 100, 80, 50, 30, 10]
+structure = [71, 50, 30, 10]
 activation_f = "Relu"
 classification_f = "Softmax"
 
 [network.hyperparameters]
-learning_rates = [0.001, 0.01, 0.1]
-regularisation_rates = [0.2]
+learning_rates = [0.001, 0.01, 0.1, 0.005, 0.0001]
+regularisation_rates = [0.2, 0.1]
 convergence_criteria = 0.000001
 batch_size = 1000
-num_epochs = 1
+num_epochs = 100

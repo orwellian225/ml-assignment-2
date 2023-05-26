@@ -138,7 +138,7 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
 }
 
 void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
-    auto filename = filepath/(fmt::format("{}-{}.nnw", spec_id, name));
+    auto filename = filepath/(fmt::format("{}-{}.nnw", spec_id.substr(0, 7), name));
     FILE* nnw_file = fopen(filename.string().c_str(), "w");
     fmt::println(nnw_file, "{},{},{},{}", num_features, num_labels, activate_f_key, classify_f_key);
     fmt::println(nnw_file, "{}", fmt::join(structure, ","));
@@ -150,37 +150,6 @@ void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::s
     }
 
     fclose(nnw_file);
-}
-
-void NeuralNetwork::print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
-    print_info();
-    print_perf(data, labels);
-    print_weights();
-}
-void NeuralNetwork::print_info() {
-    fmt::print(fg(fmt::color::orange), "Spec: "); fmt::print("{}\n", spec_id);
-    fmt::print(fg(fmt::color::orange), "Structure: "); fmt::print("{}\n", fmt::join(structure, " "));
-    fmt::print(fg(fmt::color::orange), "\tNumber of layers: "); fmt::print("{}\n", layer_count);
-    fmt::print(fg(fmt::color::orange), "\tLargest layer node count: "); fmt::print("{}\n", max_layer_nodes);
-    fmt::print(fg(fmt::color::orange), "\tNumber of features (Input Nodes): "); fmt::print("{}\n", num_features);
-    fmt::print(fg(fmt::color::orange), "\tNumber of labels (Output Nodes): "); fmt::print("{}\n", num_labels);
-    fmt::print(fg(fmt::color::orange), "\tNumber of Hidden layers: "); fmt::print("{}\n", structure.size() - 2);
-    fmt::print(fg(fmt::color::orange), "Learning Rate: "); fmt::print("{}\n", hyperparams.learning_rate);
-    fmt::print(fg(fmt::color::orange), "Regularisation Rate: "); fmt::print("{}\n", hyperparams.regularisation_rate);
-}
-void NeuralNetwork::print_weights() {
-    for (size_t i = 0; i < weights.size(); ++i) {
-        fmt::println("Layer {}\n{}", i, weights[i]);
-    }
-}
-void NeuralNetwork::print_perf(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
-    Eigen::MatrixXi confusion_matrix = calc_confusion_matrix(data, labels);
-    Eigen::VectorXd label_accuracy = calc_label_accuracy(confusion_matrix);
-    double accuracy = calc_network_accuracy(confusion_matrix);
-
-    fmt::print(fg(fmt::color::orange), "Confusion Matrix\n"); fmt::print("{}\n", confusion_matrix);
-    fmt::print(fg(fmt::color::orange), "\nClass Accuracy\n"); fmt::print("{}\n", label_accuracy);
-    fmt::print(fg(fmt::color::orange), "\nOverall Accuracy "); fmt::print("{:.2f} %\n", accuracy);
 }
 
 Eigen::VectorXd NeuralNetwork::fprop_layer(const Eigen::VectorXd& input, size_t layer) {

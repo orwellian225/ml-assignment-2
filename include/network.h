@@ -50,12 +50,6 @@ class NeuralNetwork {
         void train(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, const size_t num_epochs);
 
         void serialize(const std::filesystem::path filepath, const std::string name);
-
-        void print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
-        void print_info();
-        void print_weights();
-        void print_perf(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
-
     private:
         // Dimensions
         size_t layer_count; // How many layers
