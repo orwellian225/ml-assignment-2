@@ -77,19 +77,3 @@ def read_data(data_filepath: str, show_log=False) -> np.array:
 
     data_file.close()
     return feature_matrix
-
-def read_network_weights(weights_filepath: str) -> np.array:
-
-    weights_file = open(weights_filepath, 'r')
-    structure = weights_file.readline().strip().split(',')
-    weights = []
-
-    for i in range(len(structure) - 1):
-        wmatrix = []
-        for j in range(int(structure[i + 1])):
-            weights_line = weights_file.readline().strip().split(',')
-            wmatrix.append(weights_line[:len(weights_line) - 1])
-
-        weights.append(np.array(wmatrix).astype(np.float64))
-    
-    return weights 

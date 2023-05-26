@@ -1,11 +1,45 @@
 import numpy as np
 import typing
 
+network_functions = {
+    "LINEAR": lambda np_vec: np_vec,
+    "RELU": lambda np_vec: np.vectorize(lambda x: x if x > 0 else 0)(np_vec),
+    "LOGISTIC": lambda np_vec: np.vectorize(lambda x: 1 / (1 + np.exp(-x)))(np_vec),
+    "SOFTMAX": lambda np_vec: np.exp(np_vec) / np.exp(np_vec).sum()
+}
+
 class NeuralNetwork:
-    def __init__(self, num_features: int, num_labels: int, weights: typing.List[np.array], activation_f: typing.Callable[[np.array], np.array], classification_f: typing.Callable[[np.array], np.array]) -> None:
+    def __init__(self, nn_filepath: str) -> None:
+        """ FILE FORMAT
+        num_features,num_labels,activation_function,classification_function
+        structure as 0,0,0,0
+        weights
+        """
+
+        nn_file = open(nn_filepath, 'r')
+
+        meta_line = nn_file.readline().strip().split(',')
+        num_features = int(meta_line[0])
+        num_labels = int(meta_line[1])
+        activate_f = meta_line[2]
+        classify_f = meta_line[3]
+
+        structure_line = nn_file.readline().strip().split(',')
+        structure = np.array(structure_line).astype(np.int32)
+
+        weights = []
+        for i in range(len(structure) - 1):
+            wmatrix = []
+            for j in range(int(structure[i + 1])):
+                weights_line = nn_file.readline().strip().split(',')
+                wmatrix.append(weights_line[:len(weights_line) - 1])
+
+            weights.append(np.array(wmatrix).astype(np.float64))
+
         self.weights = weights
-        self.activation_f = activation_f
-        self.classification_f = classification_f
+        self.structure = structure
+        self.activation_f = network_functions[activate_f] 
+        self.classification_f = network_functions[classify_f]
         self.num_features = num_features
         self.num_labels = num_labels
 
