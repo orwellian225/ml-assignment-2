@@ -43,6 +43,8 @@ class NeuralNetwork:
         self.num_features = num_features
         self.num_labels = num_labels
 
+        nn_file.close()
+
     def label_int_to_vec(self, label: int) -> np.array:
         vec = np.array([0] * self.num_labels)
         vec[label] = 1
