@@ -1,9 +1,9 @@
 import data_ops as do
 import network
 
-data_filepath = ""
-network_filepath = ""
-output_filepath = ""
+data_filepath = "./data/submission/testdata.txt"
+network_filepath = "./data/submission/network.nnw"
+output_filepath = "./data/submission/testlabels.txt"
 
 def main():
     data = do.read_data(data_filepath)
