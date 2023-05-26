@@ -2,6 +2,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -10,15 +11,32 @@
 
 #include "network.h"
 
-NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, NetworkFunc classify_f, double learning_rate, double regularisation_rate) {
+static const std::unordered_map<std::string, NetworkFunc> network_functions = {
+    {"LINEAR", [](const Eigen::VectorXd& values) { return values; }},
+    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0.0 ? x : 0.0 ; }); }},
+    {"LOGISTIC", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return 1.0 / (1.0 + std::exp(-x)); }); }},
+    {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.array().exp() / values.array().exp().sum(); }},
+};
+
+static const std::unordered_map<std::string, NetworkFunc> network_functions_derivative = {
+    {"LINEAR", [](const Eigen::VectorXd& values) { return Eigen::VectorXd::Constant(values.size(), 1); }},
+    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0.0 ? 1.0 : 0.0 ; }); }},
+    {"LOGISTIC", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
+    {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
+};
+
+NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate, double regularisation_rate) {
     // Assign
     this->spec_id = spec_id;
     this->structure = structure;
-    this->activate_f = activate_f;
-    this->classify_f = classify_f;
-    this->activate_fprime = activate_fprime;
+    this->activate_f = network_functions.at(activate_f);
+    this->classify_f = network_functions.at(classify_f);
+    this->activate_fprime = network_functions_derivative.at(activate_f);
     this->learning_rate = learning_rate;
     this->regularisation_rate = regularisation_rate;
+
+    this->activate_f_key = activate_f;
+    this->classify_f_key = classify_f;
 
     // Calculate the network dimensions
     this->layer_count = structure.size();
@@ -123,16 +141,14 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
 }
 
 void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
-    auto filename = filepath/(fmt::format("{}-{}-alpha{}-lambda{}.nnw", spec_id, name, learning_rate, regularisation_rate));
+    auto filename = filepath/(fmt::format("{}-{}.nnw", spec_id, name));
     FILE* nnw_file = fopen(filename.string().c_str(), "w");
+    fmt::println(nnw_file, "{},{},{},{}", num_features, num_labels, activate_f_key, classify_f_key);
     fmt::println(nnw_file, "{}", fmt::join(structure, ","));
 
     for (auto weight_m: weights) {
         for (size_t i = 0; i < weight_m.rows(); ++i) {
-            for (size_t j = 0; j < weight_m.cols(); ++j) {
-                fmt::print(nnw_file, "{},", weight_m(i, j));
-            }
-            fmt::print(nnw_file, "\n");
+            fmt::println(nnw_file, "{}", fmt::join(weight_m.row(i).array(), ","));
         }
     }
 
@@ -156,7 +172,9 @@ void NeuralNetwork::print_info() {
     fmt::print(fg(fmt::color::orange), "Regularisation Rate: "); fmt::print("{}\n", regularisation_rate);
 }
 void NeuralNetwork::print_weights() {
-    fmt::print(fg(fmt::color::red), "TODO: Print Weights in readable fashion");
+    for (size_t i = 0; i < weights.size(); ++i) {
+        fmt::println("Layer {}\n{}", i, weights[i]);
+    }
 }
 void NeuralNetwork::print_perf(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
     Eigen::MatrixXi confusion_matrix = calc_confusion_matrix(data, labels);

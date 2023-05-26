@@ -5,7 +5,6 @@
 #include <math.h>
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 #include <Eigen/Dense>
 #include <fmt/core.h>
@@ -107,7 +106,7 @@ void NeuralNetworkSpecification::create_networks() {
     size_t regularisation_idx = 0;
     for (size_t i = 0; i < num_networks; ++i) {
         networks.push_back(
-            NeuralNetwork(id, structure, network_functions.at(activation_function), network_functions_derivative.at(activation_function), network_functions.at(classification_function), learning_rates[learning_idx], regularisation_rates[regularisation_idx])
+            NeuralNetwork(id, structure, activation_function, classification_function, learning_rates[learning_idx], regularisation_rates[regularisation_idx])
         );
 
         ++learning_idx;
@@ -145,20 +144,23 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
 
     fmt::println("Before Network Performance");
     for (size_t i = 0; i < num_networks; ++i) {
+        network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
+        network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
         fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].learning_rate, networks[i].regularisation_rate, network_accuracies[i]);
+        fmt::println("{}", network_confusion_matricies[i]);
     }
     fmt::println("");
 
+    fmt::println("After Network Performance");
     for (size_t i = 0; i < num_networks; ++i) {
         networks[i].train(training_data, training_labels, 10);
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
+        networks[i].serialize(std::filesystem::path("data\\saved_nn"),fmt::format("nn_{}", i));
+        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].learning_rate, networks[i].regularisation_rate, network_accuracies[i]);
+        fmt::println("{}", network_confusion_matricies[i]);
     }
 
-    fmt::println("After Network Performance");
-    for (size_t i = 0; i < num_networks; ++i) {
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].learning_rate, networks[i].regularisation_rate, network_accuracies[i]);
-    }
     fmt::println("");
 }
 

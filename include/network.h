@@ -33,11 +33,11 @@ class NeuralNetwork {
         // Weights
         std::vector<Eigen::MatrixXd> weights;
 
-        NeuralNetwork() : NeuralNetwork("-1", std::vector<size_t>(0), [](const Eigen::VectorXd& values) { return values; }, [](const Eigen::VectorXd& values) { return Eigen::VectorXd::Constant(values.size(), 1); }, 0.0) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, double learning_rate) : NeuralNetwork(spec_id, structure, activate_f, activate_fprime, learning_rate, 0.0) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, double learning_rate, double regularisation_rate) : NeuralNetwork(spec_id, structure, activate_f, activate_fprime, [](const Eigen::VectorXd& values) { return values; }, learning_rate, regularisation_rate) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, NetworkFunc classify_f, double learning_rate) : NeuralNetwork(spec_id, structure, activate_f, activate_fprime, classify_f, learning_rate, 0.0) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, NetworkFunc classify_f, double learning_rate, double regularisation_rate);
+        NeuralNetwork() : NeuralNetwork("-1", std::vector<size_t>(0), "LINEAR", 0.0) {}
+        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, double learning_rate) : NeuralNetwork(spec_id, structure, activate_f, learning_rate, 0.0) {}
+        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, double learning_rate, double regularisation_rate) : NeuralNetwork(spec_id, structure, activate_f, "LINEAR", learning_rate, regularisation_rate) {}
+        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate) : NeuralNetwork(spec_id, structure, activate_f, classify_f, learning_rate, 0.0) {}
+        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate, double regularisation_rate);
         ~NeuralNetwork();
 
         // Evaluation
@@ -63,6 +63,8 @@ class NeuralNetwork {
         size_t max_layer_nodes; // The number of nodes in the largest layer
         size_t num_labels; // Number of output nodes
         size_t num_features; // Number of input node
+        std::string activate_f_key;
+        std::string classify_f_key;
 
         Eigen::VectorXd fprop_layer(const Eigen::VectorXd& input, size_t layer);
         std::vector<Eigen::VectorXd> fprop(const Eigen::VectorXd& input);
