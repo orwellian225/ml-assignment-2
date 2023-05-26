@@ -80,12 +80,10 @@ NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
 
 void NeuralNetworkSpecification::create_networks() {
     const size_t num_networks = hyperparam_set.count_permutations();
-    std::vector<NeuralNetwork> networks(num_networks);
-    std::vector<hyperparams_t> permutations = hyperparam_set.construct_permutations();
+    std::vector<hyperparams_t> hp_permutations = hyperparam_set.construct_permutations();
+
     for (size_t i = 0; i < num_networks; ++i) {
-        networks.push_back(
-            NeuralNetwork(id, structure, activation_function, classification_function, permutations[i].learning_rate, permutations[i].regularisation_rate)
-        );
+        networks.push_back(NeuralNetwork(id, structure, activation_function, classification_function, hp_permutations[i]));
     }
 }
 
@@ -115,8 +113,7 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     for (size_t i = 0; i < num_networks; ++i) {
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].learning_rate, networks[i].regularisation_rate, network_accuracies[i]);
-        fmt::println("{}", network_confusion_matricies[i]);
+        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].hyperparams.learning_rate, networks[i].hyperparams.regularisation_rate, network_accuracies[i]);
     }
     fmt::println("");
 
@@ -126,8 +123,7 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
         networks[i].serialize(std::filesystem::path("data\\saved_nn"),fmt::format("nn_{}", i));
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].learning_rate, networks[i].regularisation_rate, network_accuracies[i]);
-        fmt::println("{}", network_confusion_matricies[i]);
+        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].hyperparams.learning_rate, networks[i].hyperparams.regularisation_rate, network_accuracies[i]);
     }
 
     fmt::println("");
