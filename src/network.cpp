@@ -2,6 +2,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -140,16 +141,14 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
 }
 
 void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
-    auto filename = filepath/(fmt::format("{}-{}-alpha{}-lambda{}.nnw", spec_id, name, learning_rate, regularisation_rate));
+    auto filename = filepath/(fmt::format("{}-{}.nnw", spec_id, name));
     FILE* nnw_file = fopen(filename.string().c_str(), "w");
+    fmt::println(nnw_file, "{},{},{},{}", num_features, num_labels, activate_f_key, classify_f_key);
     fmt::println(nnw_file, "{}", fmt::join(structure, ","));
 
     for (auto weight_m: weights) {
         for (size_t i = 0; i < weight_m.rows(); ++i) {
-            for (size_t j = 0; j < weight_m.cols(); ++j) {
-                fmt::print(nnw_file, "{},", weight_m(i, j));
-            }
-            fmt::print(nnw_file, "\n");
+            fmt::println(nnw_file, "{}", fmt::join(weight_m.row(i).array(), ","));
         }
     }
 
@@ -173,7 +172,9 @@ void NeuralNetwork::print_info() {
     fmt::print(fg(fmt::color::orange), "Regularisation Rate: "); fmt::print("{}\n", regularisation_rate);
 }
 void NeuralNetwork::print_weights() {
-    fmt::print(fg(fmt::color::red), "TODO: Print Weights in readable fashion");
+    for (size_t i = 0; i < weights.size(); ++i) {
+        fmt::println("Layer {}\n{}", i, weights[i]);
+    }
 }
 void NeuralNetwork::print_perf(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
     Eigen::MatrixXi confusion_matrix = calc_confusion_matrix(data, labels);

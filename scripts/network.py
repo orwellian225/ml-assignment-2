@@ -32,7 +32,7 @@ class NeuralNetwork:
             wmatrix = []
             for j in range(int(structure[i + 1])):
                 weights_line = nn_file.readline().strip().split(',')
-                wmatrix.append(weights_line[:len(weights_line) - 1])
+                wmatrix.append(weights_line)
 
             weights.append(np.array(wmatrix).astype(np.float64))
 

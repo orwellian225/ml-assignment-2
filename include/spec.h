@@ -6,7 +6,6 @@
 #include <math.h>
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 #include <Eigen/Dense>
 #include <toml++/toml.h>
