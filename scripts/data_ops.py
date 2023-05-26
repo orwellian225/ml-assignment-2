@@ -87,8 +87,9 @@ def read_network_weights(weights_filepath: str) -> np.array:
     for i in range(len(structure) - 1):
         wmatrix = []
         for j in range(int(structure[i + 1])):
-           wmatrix.append(weights_file.readline().strip().split(','))
+            weights_line = weights_file.readline().strip().split(',')
+            wmatrix.append(weights_line[:len(weights_line) - 1])
 
-        weights.append(np.array(wmatrix))
+        weights.append(np.array(wmatrix).astype(np.float64))
     
     return weights 
