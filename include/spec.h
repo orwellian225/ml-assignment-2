@@ -11,6 +11,7 @@
 #include <toml++/toml.h>
 
 #include "network.h"
+#include "hyperparams.h"
 
 class NeuralNetworkSpecification {
     public:
@@ -25,8 +26,7 @@ class NeuralNetworkSpecification {
         size_t num_labels;
         size_t data_size;
 
-        std::vector<double> learning_rates;
-        std::vector<double> regularisation_rates;
+        HyperparamSet hyperparam_set;
         std::string activation_function;
         std::string classification_function;
 

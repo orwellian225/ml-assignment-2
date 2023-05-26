@@ -10,6 +10,7 @@
 #include <fmt/core.h>
 
 #include "network.h"
+#include "hyperparams.h"
 
 static const std::unordered_map<std::string, NetworkFunc> network_functions = {
     {"LINEAR", [](const Eigen::VectorXd& values) { return values; }},
@@ -25,16 +26,15 @@ static const std::unordered_map<std::string, NetworkFunc> network_functions_deri
     {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
 };
 
-NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate, double regularisation_rate) {
+NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams) {
     // Assign
     this->spec_id = spec_id;
     this->structure = structure;
     this->activate_f = network_functions.at(activate_f);
     this->classify_f = network_functions.at(classify_f);
     this->activate_fprime = network_functions_derivative.at(activate_f);
-    this->learning_rate = learning_rate;
-    this->regularisation_rate = regularisation_rate;
 
+    this->hyperparams = hyperparams;
     this->activate_f_key = activate_f;
     this->classify_f_key = classify_f;
 
@@ -84,9 +84,6 @@ size_t NeuralNetwork::eval(const Eigen::VectorXd& input) {
 }
 
 void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, const size_t num_epochs) {
-    const size_t batch_size = 1000;
-    const double convergance_criteria = 1e-6;
-
     std::vector<Eigen::MatrixXd> gradients(layer_count - 1);
     for (size_t i = 0; i < layer_count - 1; ++i) {
         gradients[i] = Eigen::MatrixXd::Constant(weights[i].rows(), weights[i].cols(), 0);
@@ -108,24 +105,24 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
                 gradients[ii] += errors[ii + 1] * activation_with_bias.transpose();
             }
 
-            if (i % batch_size == 0) {
+            if (i % hyperparams.batch_size == 0) {
                 converged = true;
                 for (size_t ii = 0; ii < layer_count - 1; ++ii) {
                     const Eigen::MatrixXd& prev_weights = gradients[ii];
 
                     // Regularise everything except bias weights
-                    gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / batch_size + regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
+                    gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / hyperparams.batch_size + hyperparams.regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
 
                     // Normalise the bias
-                    gradients[ii].row(0) /= batch_size;
+                    gradients[ii].row(0) /= hyperparams.batch_size;
                     
                     // Applying update
-                    weights[ii] -= learning_rate * gradients[ii];
+                    weights[ii] -= hyperparams.learning_rate * gradients[ii];
 
                     // Reset gradients
                     gradients[ii] = Eigen::MatrixXd::Constant(weights[ii].rows(), weights[ii].cols(), 0);
 
-                    converged = converged && (weights[ii] - prev_weights).norm() < convergance_criteria;
+                    converged = converged && (weights[ii] - prev_weights).norm() < hyperparams.convergence_criteria;
                 }
 
                 if (converged) {
@@ -168,8 +165,8 @@ void NeuralNetwork::print_info() {
     fmt::print(fg(fmt::color::orange), "\tNumber of features (Input Nodes): "); fmt::print("{}\n", num_features);
     fmt::print(fg(fmt::color::orange), "\tNumber of labels (Output Nodes): "); fmt::print("{}\n", num_labels);
     fmt::print(fg(fmt::color::orange), "\tNumber of Hidden layers: "); fmt::print("{}\n", structure.size() - 2);
-    fmt::print(fg(fmt::color::orange), "Learning Rate: "); fmt::print("{}\n", learning_rate);
-    fmt::print(fg(fmt::color::orange), "Regularisation Rate: "); fmt::print("{}\n", regularisation_rate);
+    fmt::print(fg(fmt::color::orange), "Learning Rate: "); fmt::print("{}\n", hyperparams.learning_rate);
+    fmt::print(fg(fmt::color::orange), "Regularisation Rate: "); fmt::print("{}\n", hyperparams.regularisation_rate);
 }
 void NeuralNetwork::print_weights() {
     for (size_t i = 0; i < weights.size(); ++i) {

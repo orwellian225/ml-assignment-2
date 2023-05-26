@@ -9,6 +9,8 @@
 #include <Eigen/Core>
 #include <fmt/ostream.h>
 
+#include "hyperparams.h"
+
 typedef std::function<Eigen::VectorXd(const Eigen::VectorXd&)> NetworkFunc;
 
 template <typename T>
@@ -24,8 +26,7 @@ class NeuralNetwork {
         std::vector<size_t> structure;
 
         // Hyperparams
-        double learning_rate;
-        double regularisation_rate;
+        hyperparams_t hyperparams;
         NetworkFunc activate_f;
         NetworkFunc classify_f;
         NetworkFunc activate_fprime;
@@ -33,11 +34,9 @@ class NeuralNetwork {
         // Weights
         std::vector<Eigen::MatrixXd> weights;
 
-        NeuralNetwork() : NeuralNetwork("-1", std::vector<size_t>(0), "LINEAR", 0.0) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, double learning_rate) : NeuralNetwork(spec_id, structure, activate_f, learning_rate, 0.0) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, double learning_rate, double regularisation_rate) : NeuralNetwork(spec_id, structure, activate_f, "LINEAR", learning_rate, regularisation_rate) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate) : NeuralNetwork(spec_id, structure, activate_f, classify_f, learning_rate, 0.0) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate, double regularisation_rate);
+        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams);
+        NeuralNetwork() : NeuralNetwork("NoID", {}, "LINEAR", "LINEAR", hyperparams_t { 0.1, 0.1, 0.001, 1000, 10 }) {}
+        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f) : NeuralNetwork(spec_id, structure, activate_f, "LINEAR", hyperparams_t { 0.1, 0.1, 0.001, 1000, 10 }) {}
         ~NeuralNetwork();
 
         // Evaluation
