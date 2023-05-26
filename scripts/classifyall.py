@@ -1,9 +1,9 @@
 import data_ops as do
 import network
 
-data_filepath = "./data/basic_data.txt"
-network_filepath = "./data/saved_nn/test.nnw"
-output_filepath = "./data/basic_output.txt"
+data_filepath = ""
+network_filepath = ""
+output_filepath = ""
 
 def main():
     data = do.read_data(data_filepath)
@@ -19,6 +19,6 @@ def main():
 
     output_file.close()
 
-
 if __name__ == "__main__":
+    pass
     main()
