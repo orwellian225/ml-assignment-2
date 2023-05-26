@@ -107,7 +107,7 @@ void NeuralNetworkSpecification::create_networks() {
     size_t regularisation_idx = 0;
     for (size_t i = 0; i < num_networks; ++i) {
         networks.push_back(
-            NeuralNetwork(id, structure, activation_function, activation_function, classification_function, learning_rates[learning_idx], regularisation_rates[regularisation_idx])
+            NeuralNetwork(id, structure, activation_function, classification_function, learning_rates[learning_idx], regularisation_rates[regularisation_idx])
         );
 
         ++learning_idx;
