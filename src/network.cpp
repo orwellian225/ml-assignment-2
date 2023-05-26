@@ -10,15 +10,32 @@
 
 #include "network.h"
 
-NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, NetworkFunc activate_f, NetworkFunc activate_fprime, NetworkFunc classify_f, double learning_rate, double regularisation_rate) {
+static const std::unordered_map<std::string, NetworkFunc> network_functions = {
+    {"LINEAR", [](const Eigen::VectorXd& values) { return values; }},
+    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0.0 ? x : 0.0 ; }); }},
+    {"LOGISTIC", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return 1.0 / (1.0 + std::exp(-x)); }); }},
+    {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.array().exp() / values.array().exp().sum(); }},
+};
+
+static const std::unordered_map<std::string, NetworkFunc> network_functions_derivative = {
+    {"LINEAR", [](const Eigen::VectorXd& values) { return Eigen::VectorXd::Constant(values.size(), 1); }},
+    {"RELU", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x > 0.0 ? 1.0 : 0.0 ; }); }},
+    {"LOGISTIC", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
+    {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
+};
+
+NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, double learning_rate, double regularisation_rate) {
     // Assign
     this->spec_id = spec_id;
     this->structure = structure;
-    this->activate_f = activate_f;
-    this->classify_f = classify_f;
-    this->activate_fprime = activate_fprime;
+    this->activate_f = network_functions.at(activate_f);
+    this->classify_f = network_functions.at(classify_f);
+    this->activate_fprime = network_functions_derivative.at(activate_f);
     this->learning_rate = learning_rate;
     this->regularisation_rate = regularisation_rate;
+
+    this->activate_f_key = activate_f;
+    this->classify_f_key = classify_f;
 
     // Calculate the network dimensions
     this->layer_count = structure.size();
