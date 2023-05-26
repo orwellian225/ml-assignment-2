@@ -29,6 +29,8 @@ HyperparamSet::HyperparamSet(toml::table hyperparam_table) {
     this->num_epochs = hyperparam_table["num_epochs"].value<size_t>().value_or(1);
 }
 
+HyperparamSet::~HyperparamSet() {}
+
 size_t HyperparamSet::count_permutations() {
    return learning_rates.size() * regularisation_rates.size();
 }
