@@ -22,7 +22,7 @@ struct fmt::formatter<
 class NeuralNetwork {
     public:
         // Metadata
-        std::string spec_id;
+        std::string id;
         std::vector<size_t> structure;
 
         // Hyperparams
@@ -34,9 +34,9 @@ class NeuralNetwork {
         // Weights
         std::vector<Eigen::MatrixXd> weights;
 
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams);
+        NeuralNetwork(std::string id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams);
         NeuralNetwork() : NeuralNetwork("NoID", {}, "LINEAR", "LINEAR", hyperparams_t { 0.1, 0.1, 0.001, 1000, 10 }) {}
-        NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f) : NeuralNetwork(spec_id, structure, activate_f, "LINEAR", hyperparams_t { 0.1, 0.1, 0.001, 1000, 10 }) {}
+        NeuralNetwork(std::string id, std::vector<size_t> structure, std::string activate_f) : NeuralNetwork(id, structure, activate_f, "LINEAR", hyperparams_t { 0.1, 0.1, 0.001, 1000, 10 }) {}
         ~NeuralNetwork();
 
         // Evaluation
@@ -49,7 +49,9 @@ class NeuralNetwork {
 
         void train(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels, const size_t num_epochs);
 
-        void serialize(const std::filesystem::path filepath, const std::string name);
+        void serialize(const std::filesystem::path filepath);
+
+        std::string to_string();
     private:
         // Dimensions
         size_t layer_count; // How many layers

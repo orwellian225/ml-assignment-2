@@ -26,9 +26,9 @@ static const std::unordered_map<std::string, NetworkFunc> network_functions_deri
     {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
 };
 
-NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams) {
+NeuralNetwork::NeuralNetwork(std::string id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams) {
     // Assign
-    this->spec_id = spec_id;
+    this->id = id;
     this->structure = structure;
     this->activate_f = network_functions.at(activate_f);
     this->classify_f = network_functions.at(classify_f);
@@ -137,8 +137,8 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
     }
 }
 
-void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
-    auto filename = filepath/(fmt::format("{}-{}.nnw", spec_id.substr(0, 7), name));
+void NeuralNetwork::serialize(const std::filesystem::path filepath) {
+    auto filename = filepath/(fmt::format("{}.nnw", id));
     FILE* nnw_file = fopen(filename.string().c_str(), "w");
     fmt::println(nnw_file, "{},{},{},{}", num_features, num_labels, activate_f_key, classify_f_key);
     fmt::println(nnw_file, "{}", fmt::join(structure, ","));
@@ -150,6 +150,14 @@ void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::s
     }
 
     fclose(nnw_file);
+}
+
+std::string NeuralNetwork::to_string() {
+    std::string result = "";
+
+    result = fmt::format("{:<9} | {:<} | {:<}", fmt::format(fg(fmt::terminal_color::blue), "{}", id), fmt::join(structure, ", "), hyperparams.to_string());
+
+    return result;
 }
 
 Eigen::VectorXd NeuralNetwork::fprop_layer(const Eigen::VectorXd& input, size_t layer) {

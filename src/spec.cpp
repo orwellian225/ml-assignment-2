@@ -5,10 +5,12 @@
 #include <math.h>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include <Eigen/Dense>
 #include <fmt/core.h>
 #include <fmt/color.h>
+#include <fmt/chrono.h>
 #include <toml++/toml.h>
 
 #include "spec.h"
@@ -62,7 +64,7 @@ void NeuralNetworkSpecification::create_networks() {
     std::vector<hyperparams_t> hp_permutations = hyperparam_set.construct_permutations();
 
     for (size_t i = 0; i < num_networks; ++i) {
-        networks.push_back(NeuralNetwork(id, structure, activation_function, classification_function, hp_permutations[i]));
+        networks.push_back(NeuralNetwork(fmt::format("{}-{}", id.substr(0,7), i), structure, activation_function, classification_function, hp_permutations[i]));
     }
 }
 
@@ -88,22 +90,45 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     std::vector<Eigen::MatrixXi> network_confusion_matricies(num_networks);
     std::vector<double> network_accuracies(num_networks);
 
-    fmt::println("Before Network Performance");
-    for (size_t i = 0; i < num_networks; ++i) {
-        network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
-        network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].hyperparams.learning_rate, networks[i].hyperparams.regularisation_rate, network_accuracies[i]);
+    fmt::print(fg(fmt::terminal_color::yellow), "Networks\n");
+    for (auto network: networks) {
+        fmt::println("\t{}", network.to_string());
     }
     fmt::println("");
 
-    fmt::println("After Network Performance");
+    fmt::print(fg(fmt::terminal_color::yellow), "Before training network performance\n");
+    for (size_t i = 0; i < num_networks; ++i) {
+        network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
+        network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
+        fmt::println("\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
+    }
+    fmt::println("");
+
+    auto start_time = std::chrono::system_clock::now();
+    fmt::println("{}: {}\n", 
+        fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+    );
+
+    fmt::print(fg(fmt::terminal_color::yellow), "After training network performance\n");
     for (size_t i = 0; i < num_networks; ++i) {
         networks[i].train(training_data, training_labels, hyperparam_set.num_epochs);
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        networks[i].serialize(std::filesystem::path("data\\saved_nn"),fmt::format("nn_{}", i));
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].hyperparams.learning_rate, networks[i].hyperparams.regularisation_rate, network_accuracies[i]);
+        networks[i].serialize(std::filesystem::path("data\\saved_nn"));
+        fmt::println("\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
     }
+    auto end_time = std::chrono::system_clock::now();
+    fmt::println("\n{}: {}", 
+        fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+    );
+
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    fmt::println("{}: {}",
+        fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
+    );
 
     fmt::println("");
 }

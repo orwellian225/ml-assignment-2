@@ -29,7 +29,7 @@ void test_refactor() {
     const std::filesystem::path network_spec_dir(std::filesystem::current_path()/"data/training_specs");
     std::vector<NeuralNetworkSpecification> all_specs;
 
-    fmt::println("Available Network Specifications");
+    fmt::print(fg(fmt::terminal_color::yellow), "Available Network Specifications\n");
     for (const auto& entry: std::filesystem::directory_iterator(network_spec_dir)) {
         toml::table spec_file = toml::parse_file(entry.path().string());
         all_specs.push_back(NeuralNetworkSpecification(spec_file));
@@ -40,7 +40,7 @@ void test_refactor() {
         );
     }
 
-    fmt::print("Type the number of the network specification to use: ");
+    fmt::print(fg(fmt::terminal_color::magenta), "\nType the number of the network specification to use: ");
     size_t selected_spec = -1;
     std::cin >> selected_spec;
     --selected_spec; //Change the typed number 1 -> n to an index of 0 -> n-1
