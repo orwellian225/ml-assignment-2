@@ -104,19 +104,27 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     }
     fmt::println(report_out, "");
 
+    auto start_time = std::chrono::system_clock::now();
+    fmt::println(report_out, "{}: {}\n", 
+        fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+    );
+    
+    if (report_out != stdout) {
+        fmt::println("{}: {}", 
+            fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
+            fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+        );
+    }
+
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "Before training network performance\n");
+    #pragma omp parallel for
     for (size_t i = 0; i < num_networks; ++i) {
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
         fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
     }
     fmt::println(report_out, "");
-
-    auto start_time = std::chrono::system_clock::now();
-    fmt::println(report_out, "{}: {}\n", 
-        fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
-        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
-    );
 
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "After training network performance\n");
     #pragma omp parallel for
@@ -128,16 +136,26 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
         fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
     }
     auto end_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+
     fmt::println(report_out, "\n{}: {}", 
         fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
         fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", end_time)
     );
-
-    std::chrono::duration<double> elapsed_time = end_time - start_time;
     fmt::println(report_out, "{}: {}",
         fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
         fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
     );
 
-    fmt::println(report_out, "");
+    if (report_out != stdout) {
+        fmt::println("{}: {}", 
+            fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
+            fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", end_time)
+        );
+        fmt::println("{}: {}",
+            fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
+            fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
+        );
+    }
+
 }
