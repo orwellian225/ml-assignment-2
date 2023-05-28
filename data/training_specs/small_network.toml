@@ -1,5 +1,6 @@
 name = "Small Data for testing"
 author = "Brendan Griffiths"
+report_filepath = "data\\reports\\small_testing.txt"
 
 [data]
 data_file = "data\\small_data.txt"
@@ -14,7 +15,7 @@ activation_f = "Relu"
 classification_f = "Softmax"
 
 [network.hyperparameters]
-learning_rates = [0.01]
+learning_rates = [0.01, 0.5, 1.0]
 regularisation_rates = [0.2] 
 onvergence_criteria = 0.000001
 batch_size = 1000

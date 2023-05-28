@@ -1,4 +1,4 @@
-name = "All Data for testing"
+name = "Unprocessed Data Model"
 author = "Brendan Griffiths"
 
 [data]
@@ -14,8 +14,8 @@ activation_f = "Relu"
 classification_f = "Softmax"
 
 [network.hyperparameters]
-learning_rates = [0.001, 0.01, 0.1, 0.005, 0.0001]
-regularisation_rates = [0.2, 0.1]
+learning_rates = [0.0001, 0.001, 0.005, 0.01, 0.1]
+regularisation_rates = [1.0, 0.5, 0.2, 0.1, 0.05]
 convergence_criteria = 0.000001
-batch_size = 1000
-num_epochs = 100
+batch_size = 2000
+num_epochs = 1000

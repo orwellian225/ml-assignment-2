@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include<stdio.h>
 
 #include <Eigen/Dense>
 #include <fmt/core.h>
@@ -38,6 +39,7 @@ NeuralNetworkSpecification::NeuralNetworkSpecification() {
 NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
     name = spec_file["name"].value<std::string>().value_or("No Name");
     author = spec_file["author"].value<std::string>().value_or("No Author");
+    report_filepath = std::filesystem::path(spec_file["report_filepath"].value<std::string>().value_or("NONE"));
 
     auto structure_arr = spec_file["network"]["structure"].as_array();
     for (size_t i = 0; i < structure_arr->size(); ++i) {
@@ -69,6 +71,12 @@ void NeuralNetworkSpecification::create_networks() {
 }
 
 void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
+
+    FILE* report_out = stdout;
+    if (report_filepath.string() != "NONE") {
+        report_out = fopen(report_filepath.string().c_str(), "w");
+    }
+
     const size_t num_networks = networks.size();
     const size_t num_data = data.rows();
 
@@ -90,45 +98,46 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     std::vector<Eigen::MatrixXi> network_confusion_matricies(num_networks);
     std::vector<double> network_accuracies(num_networks);
 
-    fmt::print(fg(fmt::terminal_color::yellow), "Networks\n");
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Networks\n");
     for (auto network: networks) {
-        fmt::println("\t{}", network.to_string());
+        fmt::println(report_out, "\t{}", network.to_string());
     }
-    fmt::println("");
+    fmt::println(report_out, "");
 
-    fmt::print(fg(fmt::terminal_color::yellow), "Before training network performance\n");
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Before training network performance\n");
     for (size_t i = 0; i < num_networks; ++i) {
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        fmt::println("\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
+        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
     }
-    fmt::println("");
+    fmt::println(report_out, "");
 
     auto start_time = std::chrono::system_clock::now();
-    fmt::println("{}: {}\n", 
+    fmt::println(report_out, "{}: {}\n", 
         fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
         fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
     );
 
-    fmt::print(fg(fmt::terminal_color::yellow), "After training network performance\n");
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "After training network performance\n");
+    #pragma omp parallel for
     for (size_t i = 0; i < num_networks; ++i) {
         networks[i].train(training_data, training_labels, hyperparam_set.num_epochs);
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
         networks[i].serialize(std::filesystem::path("data\\saved_nn"));
-        fmt::println("\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
+        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
     }
     auto end_time = std::chrono::system_clock::now();
-    fmt::println("\n{}: {}", 
+    fmt::println(report_out, "\n{}: {}", 
         fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
-        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", end_time)
     );
 
     std::chrono::duration<double> elapsed_time = end_time - start_time;
-    fmt::println("{}: {}",
+    fmt::println(report_out, "{}: {}",
         fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
         fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
     );
 
-    fmt::println("");
+    fmt::println(report_out, "");
 }
