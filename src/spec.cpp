@@ -127,7 +127,6 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     fmt::println(report_out, "");
 
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "After training network performance\n");
-    #pragma omp parallel for
     for (size_t i = 0; i < num_networks; ++i) {
         networks[i].train(training_data, training_labels, hyperparam_set.num_epochs);
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);

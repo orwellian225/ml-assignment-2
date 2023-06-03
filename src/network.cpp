@@ -47,7 +47,7 @@ NeuralNetwork::NeuralNetwork(std::string id, std::vector<size_t> structure, std:
     // Init the network weights
     this->weights = {};
     for (size_t l = 0; l < layer_count - 1; ++l) {
-        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1);
+        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1) / 2;
         this->weights.push_back(layer_weights);
     }
 }
@@ -89,46 +89,51 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
         gradients[i] = Eigen::MatrixXd::Constant(weights[i].rows(), weights[i].cols(), 0);
     }
 
-    bool converged = false;
-    for (size_t epoch = 0; epoch < num_epochs; ++epoch) {
+    // The batch size needs to be divisable by the data count
+    assert(data.rows() % hyperparams.batch_size == 0);
 
-        for (size_t i = 0; i < data.rows(); ++i) {
-            const Eigen::VectorXd& point = data.row(i);
-            std::vector<Eigen::VectorXd> activations = fprop(point);
-            std::vector<Eigen::VectorXd> errors = bprop(activations, labels(i));
+    for (size_t e = 0; e < num_epochs; ++e) {    
+        bool converged = false;
+        for (size_t d = 0; d < data.rows(); d += hyperparams.batch_size) {
+            #pragma omp parallel for firstprivate(d)
+            for (size_t b = 0; b < hyperparams.batch_size; b++) {
+                const size_t data_index = d + b;
+                const Eigen::VectorXd& point = data.row(data_index);
+                std::vector<Eigen::VectorXd> activations = fprop(point);
+                std::vector<Eigen::VectorXd> errors = bprop(activations, labels(data_index));
 
-            // Determine gradients
-            const Eigen::Vector<double, 1> bias(1.0);
-            for (size_t ii = 0; ii < layer_count - 1; ++ii) {
-                Eigen::VectorXd activation_with_bias(activations[ii].size() + 1);
-                activation_with_bias << bias, activations[ii];
-                gradients[ii] += errors[ii + 1] * activation_with_bias.transpose();
+                // Determine gradients
+                const Eigen::Vector<double, 1> bias(1.0);
+                for (size_t ii = 0; ii < layer_count - 1; ++ii) {
+                    Eigen::VectorXd activation_with_bias(activations[ii].size() + 1);
+                    activation_with_bias << bias, activations[ii];
+                    gradients[ii] += errors[ii + 1] * activation_with_bias.transpose();
+                }
             }
 
-            if (i % hyperparams.batch_size == 0) {
-                converged = true;
-                for (size_t ii = 0; ii < layer_count - 1; ++ii) {
-                    const Eigen::MatrixXd& prev_weights = gradients[ii];
+            // Update the weight gradients
+            converged = true;
+            for (size_t ii = 0; ii < layer_count - 1; ++ii) {
+                const Eigen::MatrixXd& prev_weights = gradients[ii];
 
-                    // Regularise everything except bias weights
-                    gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / hyperparams.batch_size + hyperparams.regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
+                // Regularise everything except bias weights
+                gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / hyperparams.batch_size + hyperparams.regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
 
-                    // Normalise the bias
-                    gradients[ii].row(0) /= hyperparams.batch_size;
-                    
-                    // Applying update
-                    weights[ii] -= hyperparams.learning_rate * gradients[ii];
+                // Normalise the bias
+                gradients[ii].row(0) /= hyperparams.batch_size;
+                
+                // Applying update
+                weights[ii] -= hyperparams.learning_rate * gradients[ii];
 
-                    // Reset gradients
-                    gradients[ii] = Eigen::MatrixXd::Constant(weights[ii].rows(), weights[ii].cols(), 0);
+                // Reset gradients
+                gradients[ii] = Eigen::MatrixXd::Constant(weights[ii].rows(), weights[ii].cols(), 0);
 
-                    converged = converged && (weights[ii] - prev_weights).norm() < hyperparams.convergence_criteria;
-                }
+                converged = converged && (weights[ii] - prev_weights).norm() < hyperparams.convergence_criteria;
+            }
 
-                if (converged) {
-                    break;
-                }
-            } 
+            if (converged) {
+                break;
+            }
         }
 
         if (converged) {
