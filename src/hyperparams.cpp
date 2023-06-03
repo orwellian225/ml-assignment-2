@@ -1,6 +1,7 @@
 #include <vector>
 
 #include <toml++/toml.h>
+#include <fmt/core.h>
 
 #include "hyperparams.h"
 
@@ -62,4 +63,10 @@ std::vector<hyperparams_t> HyperparamSet::construct_permutations() {
     }
 
     return permutations;
+}
+
+std::string hyperparams_t::to_string() {
+    return fmt::format("learning rate = {}, regularisation rate = {}, convergence criteria = {}, batch size = {}, num epochs = {}",
+        learning_rate, regularisation_rate, convergence_criteria, batch_size, num_epochs
+    );
 }

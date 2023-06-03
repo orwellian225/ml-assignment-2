@@ -29,21 +29,22 @@ void test_refactor() {
     const std::filesystem::path network_spec_dir(std::filesystem::current_path()/"data/training_specs");
     std::vector<NeuralNetworkSpecification> all_specs;
 
-    fmt::println("Available Network Specifications");
+    fmt::print(fg(fmt::terminal_color::yellow), "Available Network Specifications\n");
     for (const auto& entry: std::filesystem::directory_iterator(network_spec_dir)) {
-        all_specs.push_back(NeuralNetworkSpecification(entry.path()));
-        fmt::println("\t{}: {}", all_specs.size(), all_specs.back().name);
+        toml::table spec_file = toml::parse_file(entry.path().string());
+        all_specs.push_back(NeuralNetworkSpecification(spec_file));
+        fmt::print("\t| {:<3} | id: {:<9} | name: {:<32} |\n", 
+            fmt::format(fg(fmt::terminal_color::blue), "{}", all_specs.size()), 
+            fmt::format(fg(fmt::terminal_color::blue), "{}", all_specs.back().id.substr(0, 7)),
+            fmt::format(fg(fmt::terminal_color::green), "{}", all_specs.back().name)
+        );
     }
 
-    fmt::print("Type the number of the network specification to use: ");
+    fmt::print(fg(fmt::terminal_color::magenta), "\nType the number of the network specification to use: ");
     size_t selected_spec = -1;
     std::cin >> selected_spec;
     --selected_spec; //Change the typed number 1 -> n to an index of 0 -> n-1
-    fmt::println("");
-    fmt::print("\x1B[2J\x1b[H"); // Clear the terminal
     NeuralNetworkSpecification& spec = all_specs[selected_spec];
-
-    spec.print_info();
 
     // Load spec data
     std::ifstream data_file(spec.data_file.string());
@@ -52,9 +53,10 @@ void test_refactor() {
     Eigen::MatrixXd data(spec.data_size, spec.num_features);
     Eigen::VectorXd labels(spec.data_size);
 
+    fmt::println("");
     if (data_file.is_open()) {
         for (size_t i = 0; i < spec.data_size; ++i) {
-            fmt::print(fg(fmt::color::blue), "\rLoading: "); fmt::print("point {} of {}", i + 1, spec.data_size);
+            fmt::print(fg(fmt::terminal_color::cyan), "\rLoading: "); fmt::print("point {} of {}", i + 1, spec.data_size);
             std::string line;
             getline(data_file, line);
             Eigen::VectorXd data_point(spec.num_features);
@@ -66,23 +68,27 @@ void test_refactor() {
 
             data.row(i) = data_point;
         }
-        fmt::print(fg(fmt::color::blue), "\rLoaded data points                                        \n");
+        fmt::print(fg(fmt::terminal_color::cyan), "\rLoaded data points                                        \n");
     } else {
-        fmt::print(fg(fmt::color::red), "Failed to open the file {}. Please make sure the path is correct.\n", spec.data_file.string());
+        // Error Handling
+        fmt::print(fg(fmt::terminal_color::bright_red), "Failed to open data file {}\n", spec.data_file.string());
+        return;
     }
 
     if (label_file.is_open()) {
         for (size_t i = 0; i < spec.data_size; ++i) {
-            fmt::print(fg(fmt::color::blue), "\rLoading: "); fmt::print("label {} of {}", i + 1, spec.data_size);
+            fmt::print(fg(fmt::terminal_color::cyan), "\rLoading: "); fmt::print("label {} of {}", i + 1, spec.data_size);
             std::string line;
             getline(label_file, line);
             labels(i) = std::stoi(line);
         }
-        fmt::print(fg(fmt::color::blue), "\rLoaded labels                                                   \n");
+        fmt::print(fg(fmt::terminal_color::cyan), "\rLoaded labels                                                   \n");
     } else {
-        fmt::print(fg(fmt::color::red), "Failed to open the file {}. Please make sure the path is correct.\n", spec.label_file.string());
+        // Error handling
+        fmt::print(fg(fmt::terminal_color::bright_red), "Failed to open label file {}\n", spec.label_file.string());
+        return;
     }
-
+    fmt::println("");
 
     data_file.close();
     label_file.close();

@@ -26,9 +26,9 @@ static const std::unordered_map<std::string, NetworkFunc> network_functions_deri
     {"SOFTMAX", [](const Eigen::VectorXd& values) { return values.unaryExpr([](double x) { return x * (1.0 - x); }); }},
 };
 
-NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams) {
+NeuralNetwork::NeuralNetwork(std::string id, std::vector<size_t> structure, std::string activate_f, std::string classify_f, hyperparams_t hyperparams) {
     // Assign
-    this->spec_id = spec_id;
+    this->id = id;
     this->structure = structure;
     this->activate_f = network_functions.at(activate_f);
     this->classify_f = network_functions.at(classify_f);
@@ -47,7 +47,7 @@ NeuralNetwork::NeuralNetwork(std::string spec_id, std::vector<size_t> structure,
     // Init the network weights
     this->weights = {};
     for (size_t l = 0; l < layer_count - 1; ++l) {
-        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1);
+        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1) / 2;
         this->weights.push_back(layer_weights);
     }
 }
@@ -89,46 +89,51 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
         gradients[i] = Eigen::MatrixXd::Constant(weights[i].rows(), weights[i].cols(), 0);
     }
 
-    bool converged = false;
-    for (size_t epoch = 0; epoch < num_epochs; ++epoch) {
+    // The batch size needs to be divisable by the data count
+    assert(data.rows() % hyperparams.batch_size == 0);
 
-        for (size_t i = 0; i < data.rows(); ++i) {
-            const Eigen::VectorXd& point = data.row(i);
-            std::vector<Eigen::VectorXd> activations = fprop(point);
-            std::vector<Eigen::VectorXd> errors = bprop(activations, labels(i));
+    for (size_t e = 0; e < num_epochs; ++e) {    
+        bool converged = false;
+        for (size_t d = 0; d < data.rows(); d += hyperparams.batch_size) {
+            #pragma omp parallel for firstprivate(d)
+            for (size_t b = 0; b < hyperparams.batch_size; b++) {
+                const size_t data_index = d + b;
+                const Eigen::VectorXd& point = data.row(data_index);
+                std::vector<Eigen::VectorXd> activations = fprop(point);
+                std::vector<Eigen::VectorXd> errors = bprop(activations, labels(data_index));
 
-            // Determine gradients
-            const Eigen::Vector<double, 1> bias(1.0);
-            for (size_t ii = 0; ii < layer_count - 1; ++ii) {
-                Eigen::VectorXd activation_with_bias(activations[ii].size() + 1);
-                activation_with_bias << bias, activations[ii];
-                gradients[ii] += errors[ii + 1] * activation_with_bias.transpose();
+                // Determine gradients
+                const Eigen::Vector<double, 1> bias(1.0);
+                for (size_t ii = 0; ii < layer_count - 1; ++ii) {
+                    Eigen::VectorXd activation_with_bias(activations[ii].size() + 1);
+                    activation_with_bias << bias, activations[ii];
+                    gradients[ii] += errors[ii + 1] * activation_with_bias.transpose();
+                }
             }
 
-            if (i % hyperparams.batch_size == 0) {
-                converged = true;
-                for (size_t ii = 0; ii < layer_count - 1; ++ii) {
-                    const Eigen::MatrixXd& prev_weights = gradients[ii];
+            // Update the weight gradients
+            converged = true;
+            for (size_t ii = 0; ii < layer_count - 1; ++ii) {
+                const Eigen::MatrixXd& prev_weights = gradients[ii];
 
-                    // Regularise everything except bias weights
-                    gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / hyperparams.batch_size + hyperparams.regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
+                // Regularise everything except bias weights
+                gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) = gradients[ii].block(1, 0, gradients[ii].rows() - 1, gradients[ii].cols()) / hyperparams.batch_size + hyperparams.regularisation_rate * weights[ii].block(1, 0, weights[ii].rows() - 1, weights[ii].cols());
 
-                    // Normalise the bias
-                    gradients[ii].row(0) /= hyperparams.batch_size;
-                    
-                    // Applying update
-                    weights[ii] -= hyperparams.learning_rate * gradients[ii];
+                // Normalise the bias
+                gradients[ii].row(0) /= hyperparams.batch_size;
+                
+                // Applying update
+                weights[ii] -= hyperparams.learning_rate * gradients[ii];
 
-                    // Reset gradients
-                    gradients[ii] = Eigen::MatrixXd::Constant(weights[ii].rows(), weights[ii].cols(), 0);
+                // Reset gradients
+                gradients[ii] = Eigen::MatrixXd::Constant(weights[ii].rows(), weights[ii].cols(), 0);
 
-                    converged = converged && (weights[ii] - prev_weights).norm() < hyperparams.convergence_criteria;
-                }
+                converged = converged && (weights[ii] - prev_weights).norm() < hyperparams.convergence_criteria;
+            }
 
-                if (converged) {
-                    break;
-                }
-            } 
+            if (converged) {
+                break;
+            }
         }
 
         if (converged) {
@@ -137,8 +142,8 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
     }
 }
 
-void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::string name) {
-    auto filename = filepath/(fmt::format("{}-{}.nnw", spec_id, name));
+void NeuralNetwork::serialize(const std::filesystem::path filepath) {
+    auto filename = filepath/(fmt::format("{}.nnw", id));
     FILE* nnw_file = fopen(filename.string().c_str(), "w");
     fmt::println(nnw_file, "{},{},{},{}", num_features, num_labels, activate_f_key, classify_f_key);
     fmt::println(nnw_file, "{}", fmt::join(structure, ","));
@@ -152,35 +157,12 @@ void NeuralNetwork::serialize(const std::filesystem::path filepath, const std::s
     fclose(nnw_file);
 }
 
-void NeuralNetwork::print_all(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
-    print_info();
-    print_perf(data, labels);
-    print_weights();
-}
-void NeuralNetwork::print_info() {
-    fmt::print(fg(fmt::color::orange), "Spec: "); fmt::print("{}\n", spec_id);
-    fmt::print(fg(fmt::color::orange), "Structure: "); fmt::print("{}\n", fmt::join(structure, " "));
-    fmt::print(fg(fmt::color::orange), "\tNumber of layers: "); fmt::print("{}\n", layer_count);
-    fmt::print(fg(fmt::color::orange), "\tLargest layer node count: "); fmt::print("{}\n", max_layer_nodes);
-    fmt::print(fg(fmt::color::orange), "\tNumber of features (Input Nodes): "); fmt::print("{}\n", num_features);
-    fmt::print(fg(fmt::color::orange), "\tNumber of labels (Output Nodes): "); fmt::print("{}\n", num_labels);
-    fmt::print(fg(fmt::color::orange), "\tNumber of Hidden layers: "); fmt::print("{}\n", structure.size() - 2);
-    fmt::print(fg(fmt::color::orange), "Learning Rate: "); fmt::print("{}\n", hyperparams.learning_rate);
-    fmt::print(fg(fmt::color::orange), "Regularisation Rate: "); fmt::print("{}\n", hyperparams.regularisation_rate);
-}
-void NeuralNetwork::print_weights() {
-    for (size_t i = 0; i < weights.size(); ++i) {
-        fmt::println("Layer {}\n{}", i, weights[i]);
-    }
-}
-void NeuralNetwork::print_perf(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
-    Eigen::MatrixXi confusion_matrix = calc_confusion_matrix(data, labels);
-    Eigen::VectorXd label_accuracy = calc_label_accuracy(confusion_matrix);
-    double accuracy = calc_network_accuracy(confusion_matrix);
+std::string NeuralNetwork::to_string() {
+    std::string result = "";
 
-    fmt::print(fg(fmt::color::orange), "Confusion Matrix\n"); fmt::print("{}\n", confusion_matrix);
-    fmt::print(fg(fmt::color::orange), "\nClass Accuracy\n"); fmt::print("{}\n", label_accuracy);
-    fmt::print(fg(fmt::color::orange), "\nOverall Accuracy "); fmt::print("{:.2f} %\n", accuracy);
+    result = fmt::format("{:<9} | {:<} | {:<}", fmt::format(fg(fmt::terminal_color::blue), "{}", id), fmt::join(structure, ", "), hyperparams.to_string());
+
+    return result;
 }
 
 Eigen::VectorXd NeuralNetwork::fprop_layer(const Eigen::VectorXd& input, size_t layer) {

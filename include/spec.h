@@ -6,6 +6,7 @@
 #include <math.h>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include <Eigen/Dense>
 #include <toml++/toml.h>
@@ -18,6 +19,7 @@ class NeuralNetworkSpecification {
         std::string id;
         std::string name;
         std::string author;
+        std::filesystem::path report_filepath;
 
         std::vector<size_t> structure;
         std::filesystem::path data_file;
@@ -33,13 +35,8 @@ class NeuralNetworkSpecification {
         std::vector<NeuralNetwork> networks;
 
         NeuralNetworkSpecification();
-        NeuralNetworkSpecification(std::filesystem::path spec_filepath);
         NeuralNetworkSpecification(toml::table spec_file);
 
         void create_networks();
         void train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
-
-        void print_all();
-        void print_info();
-        void print_networks();
 };
