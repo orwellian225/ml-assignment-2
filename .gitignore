@@ -4,3 +4,5 @@
 bin/
 build/
 scripts/__pycache__/
+
+data/saved_nn/

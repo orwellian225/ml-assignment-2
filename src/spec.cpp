@@ -5,10 +5,13 @@
 #include <math.h>
 #include <string>
 #include <vector>
+#include <chrono>
+#include<stdio.h>
 
 #include <Eigen/Dense>
 #include <fmt/core.h>
 #include <fmt/color.h>
+#include <fmt/chrono.h>
 #include <toml++/toml.h>
 
 #include "spec.h"
@@ -33,33 +36,10 @@ NeuralNetworkSpecification::NeuralNetworkSpecification() {
     networks = std::vector<NeuralNetwork>(0);
 }
 
-NeuralNetworkSpecification::NeuralNetworkSpecification(std::filesystem::path spec_filepath) {
-    toml::table spec_file = toml::parse_file(spec_filepath.string());
-    id = "No ID";
-    name = spec_file["name"].value<std::string>().value_or("No Name");
-    author = spec_file["author"].value<std::string>().value_or("No Author");
-
-    auto structure_arr = spec_file["network"]["structure"].as_array();
-    for (size_t i = 0; i < structure_arr->size(); ++i) {
-        structure.push_back((size_t)(structure_arr->get_as<int64_t>(i)->value_or(0)));
-    }
-
-    data_file = std::filesystem::path(spec_file["data"]["data_file"].value<std::string>().value_or("~"));
-    label_file = std::filesystem::path(spec_file["data"]["label_file"].value<std::string>().value_or("~"));
-    num_features = spec_file["data"]["feature_count"].value<size_t>().value_or(0);
-    num_labels = spec_file["data"]["label_count"].value<size_t>().value_or(0);
-    data_size = spec_file["data"]["size"].value<size_t>().value_or(0);
-    hyperparam_set = HyperparamSet(*spec_file["network"]["hyperparameters"].as_table());
-    activation_function = spec_file["network"]["activation_f"].value<std::string>().value_or("Linear");
-    classification_function = spec_file["network"]["classification_f"].value<std::string>().value_or("Linear");
-    std::transform(activation_function.begin(), activation_function.end(), activation_function.begin(), ::toupper);
-    std::transform(classification_function.begin(), classification_function.end(), classification_function.begin(), ::toupper);
-} 
-
 NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
-    id = "No ID";
     name = spec_file["name"].value<std::string>().value_or("No Name");
     author = spec_file["author"].value<std::string>().value_or("No Author");
+    report_filepath = std::filesystem::path(spec_file["report_filepath"].value<std::string>().value_or("NONE"));
 
     auto structure_arr = spec_file["network"]["structure"].as_array();
     for (size_t i = 0; i < structure_arr->size(); ++i) {
@@ -76,6 +56,9 @@ NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
     classification_function = spec_file["network"]["classification_f"].value<std::string>().value_or("Linear");
     std::transform(activation_function.begin(), activation_function.end(), activation_function.begin(), ::toupper);
     std::transform(classification_function.begin(), classification_function.end(), classification_function.begin(), ::toupper);
+
+    std::string id_prehash = name + author + std::to_string(num_features) + std::to_string(num_labels) + fmt::format("{}", fmt::join(structure, "")) + activation_function + classification_function;
+    id = fmt::format("{:x}", std::hash<std::string>{}(id_prehash));
 }
 
 void NeuralNetworkSpecification::create_networks() {
@@ -83,11 +66,17 @@ void NeuralNetworkSpecification::create_networks() {
     std::vector<hyperparams_t> hp_permutations = hyperparam_set.construct_permutations();
 
     for (size_t i = 0; i < num_networks; ++i) {
-        networks.push_back(NeuralNetwork(id, structure, activation_function, classification_function, hp_permutations[i]));
+        networks.push_back(NeuralNetwork(fmt::format("{}-{}", id.substr(0,7), i), structure, activation_function, classification_function, hp_permutations[i]));
     }
 }
 
 void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
+
+    FILE* report_out = stdout;
+    if (report_filepath.string() != "NONE") {
+        report_out = fopen(report_filepath.string().c_str(), "w");
+    }
+
     const size_t num_networks = networks.size();
     const size_t num_data = data.rows();
 
@@ -109,48 +98,63 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     std::vector<Eigen::MatrixXi> network_confusion_matricies(num_networks);
     std::vector<double> network_accuracies(num_networks);
 
-    fmt::println("Before Network Performance");
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Networks\n");
+    for (auto network: networks) {
+        fmt::println(report_out, "\t{}", network.to_string());
+    }
+    fmt::println(report_out, "");
+
+    auto start_time = std::chrono::system_clock::now();
+    fmt::println(report_out, "{}: {}\n", 
+        fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+    );
+    
+    if (report_out != stdout) {
+        fmt::println("{}: {}", 
+            fmt::format(fg(fmt::terminal_color::yellow), "Started training"), 
+            fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", start_time)
+        );
+    }
+
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Before training network performance\n");
+    #pragma omp parallel for
     for (size_t i = 0; i < num_networks; ++i) {
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].hyperparams.learning_rate, networks[i].hyperparams.regularisation_rate, network_accuracies[i]);
+        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
     }
-    fmt::println("");
+    fmt::println(report_out, "");
 
-    fmt::println("After Network Performance");
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "After training network performance\n");
     for (size_t i = 0; i < num_networks; ++i) {
         networks[i].train(training_data, training_labels, hyperparam_set.num_epochs);
         network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        networks[i].serialize(std::filesystem::path("data\\saved_nn"),fmt::format("nn_{}", i));
-        fmt::println("\t{} | alpha = {}, lambda = {} | {}", i, networks[i].hyperparams.learning_rate, networks[i].hyperparams.regularisation_rate, network_accuracies[i]);
+        networks[i].serialize(std::filesystem::path("data\\saved_nn"));
+        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
+    }
+    auto end_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+
+    fmt::println(report_out, "\n{}: {}", 
+        fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", end_time)
+    );
+    fmt::println(report_out, "{}: {}",
+        fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
+        fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
+    );
+
+    if (report_out != stdout) {
+        fmt::println("{}: {}", 
+            fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
+            fmt::format(fg(fmt::terminal_color::cyan), "{:%Y-%m-%d %H:%M}", end_time)
+        );
+        fmt::println("{}: {}",
+            fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
+            fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
+        );
     }
 
-    fmt::println("");
-}
-
-void NeuralNetworkSpecification::print_info() {
-    fmt::print(fg(fmt::color::green), "Network "); fmt::print("{}\n", name);
-    fmt::print(fg(fmt::color::green), "================================================================\n");
-    fmt::print(fg(fmt::color::orange), "Structure "); fmt::print("{}\n", fmt::join(structure, " "));
-    fmt::print(fg(fmt::color::orange), "Data "); fmt::print("{}\n", data_file.string());
-    fmt::print(fg(fmt::color::orange), "Labels "); fmt::print("{}\n", label_file.string());
-    fmt::print(fg(fmt::color::orange), "Data size "); fmt::println("{}", data_size);
-    fmt::print(fg(fmt::color::orange), "Feature count "); fmt::println("{}", num_features);
-    fmt::print(fg(fmt::color::orange), "Label count "); fmt::println("{}", num_labels);
-    fmt::print(fg(fmt::color::orange), "Activation function "); fmt::println("{}", activation_function);
-    fmt::print(fg(fmt::color::orange), "Classification function "); fmt::println("{}", classification_function);
-    fmt::print(fg(fmt::color::orange), "Hyperparameters\n");
-    fmt::print(fg(fmt::color::gold), "\tLearning Rates "); fmt::println("{}", fmt::join(hyperparam_set.learning_rates, " "));
-    fmt::print(fg(fmt::color::gold), "\tRegularisation Rates "); fmt::println("{}", fmt::join(hyperparam_set.regularisation_rates, " "));
-    fmt::print(fg(fmt::color::green), "----------------------------------------------------------------\n");
-}
-
-void NeuralNetworkSpecification::print_networks() {
-    fmt::print(fg(fmt::color::green), "----------------------------------------------------------------\n");
-    for (auto network: networks) { 
-        fmt::print(fg(fmt::color::green), "{:^64}\n", "--------");
-        network.print_info(); 
-    }
-    fmt::print(fg(fmt::color::green), "----------------------------------------------------------------\n");
 }

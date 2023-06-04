@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 #include <toml++/toml.h>
 
@@ -10,6 +11,8 @@ struct hyperparams_t {
     double convergence_criteria;
     size_t batch_size;
     size_t num_epochs;
+
+    std::string to_string();
 };
 
 class HyperparamSet {
