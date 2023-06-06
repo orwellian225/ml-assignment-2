@@ -89,7 +89,7 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
         gradients[i] = Eigen::MatrixXd::Constant(weights[i].rows(), weights[i].cols(), 0);
     }
 
-    // The batch size needs to be divisable by the data count
+    // The data size needs to be divisable by the batch size 
     assert(data.rows() % hyperparams.batch_size == 0);
 
     for (size_t e = 0; e < num_epochs; ++e) {    

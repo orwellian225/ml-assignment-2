@@ -1,0 +1,58 @@
+[33mNetworks
+[0m	[34md63a100-0[0m | 71, 50, 30, 10 | learning rate = 0.0001, regularisation rate = 1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-1[0m | 71, 50, 30, 10 | learning rate = 0.001, regularisation rate = 1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-2[0m | 71, 50, 30, 10 | learning rate = 0.005, regularisation rate = 1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-3[0m | 71, 50, 30, 10 | learning rate = 0.01, regularisation rate = 1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-4[0m | 71, 50, 30, 10 | learning rate = 0.1, regularisation rate = 1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-5[0m | 71, 50, 30, 10 | learning rate = 0.0001, regularisation rate = 0.5, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-6[0m | 71, 50, 30, 10 | learning rate = 0.001, regularisation rate = 0.5, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-7[0m | 71, 50, 30, 10 | learning rate = 0.005, regularisation rate = 0.5, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-8[0m | 71, 50, 30, 10 | learning rate = 0.01, regularisation rate = 0.5, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-9[0m | 71, 50, 30, 10 | learning rate = 0.1, regularisation rate = 0.5, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-10[0m | 71, 50, 30, 10 | learning rate = 0.0001, regularisation rate = 0.2, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-11[0m | 71, 50, 30, 10 | learning rate = 0.001, regularisation rate = 0.2, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-12[0m | 71, 50, 30, 10 | learning rate = 0.005, regularisation rate = 0.2, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-13[0m | 71, 50, 30, 10 | learning rate = 0.01, regularisation rate = 0.2, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-14[0m | 71, 50, 30, 10 | learning rate = 0.1, regularisation rate = 0.2, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-15[0m | 71, 50, 30, 10 | learning rate = 0.0001, regularisation rate = 0.1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-16[0m | 71, 50, 30, 10 | learning rate = 0.001, regularisation rate = 0.1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-17[0m | 71, 50, 30, 10 | learning rate = 0.005, regularisation rate = 0.1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-18[0m | 71, 50, 30, 10 | learning rate = 0.01, regularisation rate = 0.1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-19[0m | 71, 50, 30, 10 | learning rate = 0.1, regularisation rate = 0.1, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-20[0m | 71, 50, 30, 10 | learning rate = 0.0001, regularisation rate = 0.05, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-21[0m | 71, 50, 30, 10 | learning rate = 0.001, regularisation rate = 0.05, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-22[0m | 71, 50, 30, 10 | learning rate = 0.005, regularisation rate = 0.05, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-23[0m | 71, 50, 30, 10 | learning rate = 0.01, regularisation rate = 0.05, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+	[34md63a100-24[0m | 71, 50, 30, 10 | learning rate = 0.1, regularisation rate = 0.05, convergence criteria = 1e-06, batch size = 2000, num epochs = 1000
+
+[33mStarted training[0m: [36m2023-05-28 12:18[0m
+
+[33mBefore training network performance
+[0m	[34md63a100-22[0m | 9.1 
+	[34md63a100-7[0m | 9.6 
+	[34md63a100-10[0m | 9.9 
+	[34md63a100-19[0m | 8.1 
+	[34md63a100-13[0m | 10.7 
+	[34md63a100-0[0m | 10.8 
+	[34md63a100-16[0m | 8.9 
+	[34md63a100-4[0m | 9.4 
+	[34md63a100-20[0m | 9.6 
+	[34md63a100-11[0m | 10.7 
+	[34md63a100-23[0m | 9.5 
+	[34md63a100-8[0m | 9.2 
+	[34md63a100-17[0m | 9.9 
+	[34md63a100-14[0m | 11.5 
+	[34md63a100-1[0m | 12.2 
+	[34md63a100-5[0m | 9.9 
+	[34md63a100-21[0m | 9.8 
+	[34md63a100-18[0m | 10.4 
+	[34md63a100-15[0m | 9.6 
+	[34md63a100-24[0m | 9.6 
+	[34md63a100-12[0m | 10.8 
+	[34md63a100-9[0m | 9.700000000000001 
+	[34md63a100-2[0m | 10.100000000000001 
+	[34md63a100-6[0m | 9.8 
+	[34md63a100-3[0m | 9.700000000000001 
+
+[33mAfter training network performance
+[0m
