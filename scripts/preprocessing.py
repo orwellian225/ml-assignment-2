@@ -82,6 +82,20 @@ def PCA_custom(features):
     finalData = np.transpose(finalData)
     print(pd.DataFrame(finalData))
     
+<<<<<<< Updated upstream
+=======
+    file = open('./data/pca_matrix.txt', 'w')
+    np.savetxt(file, featureMatrix)
+    file.close()
+    
+    updateFile = open('./data/pca_matrix.txt', 'r+')
+    input = updateFile.read()
+    input = input.replace(' ', ',')
+    newFile = open('./data/pca_matrix.txt','w+')
+    newFile.write(input)
+    updateFile.close()
+    newFile.close()
+>>>>>>> Stashed changes
     # Plot the explained variance against cumulative explained variance
     #
     import matplotlib.pyplot as plt
