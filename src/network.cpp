@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <math.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -47,7 +48,7 @@ NeuralNetwork::NeuralNetwork(std::string id, std::vector<size_t> structure, std:
     // Init the network weights
     this->weights = {};
     for (size_t l = 0; l < layer_count - 1; ++l) {
-        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1) / 2;
+        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1) / 3;
         this->weights.push_back(layer_weights);
     }
 }
@@ -78,6 +79,21 @@ double NeuralNetwork::calc_network_accuracy(const Eigen::MatrixXi& confusion_mat
     return num_correct_evaluations / num_evaluations * 100.0;
 }
 
+bool NeuralNetwork::has_exploded_gradients() {
+
+    for (size_t l = 0; l < weights.size(); ++l) {
+        for (size_t r = 0; r < weights[l].rows(); ++r) {
+            for (size_t c = 0; c < weights[l].cols(); ++c) {
+                if (std::isnan(weights[l](r, c)) || std::isinf(weights[l](r, c))) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 size_t NeuralNetwork::eval(const Eigen::VectorXd& input) {
     std::vector<Eigen::VectorXd> activations = fprop(input);
     return label_vec_to_int(activations.back());
@@ -89,7 +105,7 @@ void NeuralNetwork::train(const Eigen::MatrixXd& data, const Eigen::VectorXd& la
         gradients[i] = Eigen::MatrixXd::Constant(weights[i].rows(), weights[i].cols(), 0);
     }
 
-    // The batch size needs to be divisable by the data count
+    // The data size needs to be divisable by the batch size 
     assert(data.rows() % hyperparams.batch_size == 0);
 
     for (size_t e = 0; e < num_epochs; ++e) {    

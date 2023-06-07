@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <iostream>
 #include <fstream>
+#include <stdlib.h>
 
 #include <fmt/core.h>
 #include <fmt/color.h>
@@ -21,6 +22,7 @@ void test_network();
 void test_refactor();
 
 int main() {
+    srand(static_cast<uint32_t>(time(0)));
     test_refactor();
     return 0;
 }

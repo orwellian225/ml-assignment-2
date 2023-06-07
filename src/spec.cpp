@@ -17,6 +17,7 @@
 #include "spec.h"
 #include "network.h"
 #include "hyperparams.h"
+#include "preprocessing.h"
 
 NeuralNetworkSpecification::NeuralNetworkSpecification() {
     id = "No ID";
@@ -51,13 +52,19 @@ NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
     num_features = spec_file["data"]["feature_count"].value<size_t>().value_or(0);
     num_labels = spec_file["data"]["label_count"].value<size_t>().value_or(0);
     data_size = spec_file["data"]["size"].value<size_t>().value_or(0);
+
     hyperparam_set = HyperparamSet(*spec_file["network"]["hyperparameters"].as_table());
+    preprocessing = PreprocessingSet(*spec_file["data"]["preprocessing"].as_table());
+
     activation_function = spec_file["network"]["activation_f"].value<std::string>().value_or("Linear");
     classification_function = spec_file["network"]["classification_f"].value<std::string>().value_or("Linear");
     std::transform(activation_function.begin(), activation_function.end(), activation_function.begin(), ::toupper);
     std::transform(classification_function.begin(), classification_function.end(), classification_function.begin(), ::toupper);
 
-    std::string id_prehash = name + author + std::to_string(num_features) + std::to_string(num_labels) + fmt::format("{}", fmt::join(structure, "")) + activation_function + classification_function;
+    std::string id_prehash = name + author + std::to_string(num_features) + std::to_string(num_labels) 
+                            + fmt::format("{}", fmt::join(structure, "")) + activation_function 
+                            + classification_function + fmt::format("{}", fmt::join(hyperparam_set.learning_rates, ""))
+                            + fmt::format("{}", fmt::join(hyperparam_set.regularisation_rates, ""));
     id = fmt::format("{:x}", std::hash<std::string>{}(id_prehash));
 }
 
@@ -70,11 +77,15 @@ void NeuralNetworkSpecification::create_networks() {
     }
 }
 
-void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
+void NeuralNetworkSpecification::train_networks(Eigen::MatrixXd& data, const Eigen::VectorXd& labels) {
 
     FILE* report_out = stdout;
     if (report_filepath.string() != "NONE") {
         report_out = fopen(report_filepath.string().c_str(), "w");
+    }
+
+    if (preprocessing.enabled_pca) {
+        data = preprocessing.apply_pca_transformation(data);
     }
 
     const size_t num_networks = networks.size();
@@ -86,17 +97,19 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
 
     assert(size_training_data + size_validation_data + size_testing_data == num_data);
 
-    const Eigen::MatrixXd& training_data = data.block(0, 0, size_training_data, num_features); 
+    const Eigen::MatrixXd& training_data = data.block(0, 0, size_training_data, data.cols()); 
     const Eigen::VectorXd& training_labels = labels.block(0, 0, size_training_data, 1); 
 
-    const Eigen::MatrixXd& validation_data = data.block(size_training_data, 0, size_validation_data, num_features);
+    const Eigen::MatrixXd& validation_data = data.block(size_training_data, 0, size_validation_data, data.cols());
     const Eigen::VectorXd& validation_labels = labels.block(size_training_data, 0, size_validation_data, 1);
 
-    const Eigen::MatrixXd& testing_data = data.block(size_training_data + size_validation_data, 0, size_testing_data, num_features);
+    const Eigen::MatrixXd& testing_data = data.block(size_training_data + size_validation_data, 0, size_testing_data, data.cols());
     const Eigen::VectorXd& testing_labels = labels.block(size_training_data + size_validation_data, 0, size_testing_data, 1);
 
-    std::vector<Eigen::MatrixXi> network_confusion_matricies(num_networks);
-    std::vector<double> network_accuracies(num_networks);
+    std::vector<Eigen::MatrixXi> before_confusion_matrices(num_networks);
+    std::vector<double> before_accuracies(num_networks);
+    std::vector<Eigen::MatrixXi> after_confusion_matrices(num_networks);
+    std::vector<double> after_accuracies(num_networks);
 
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "Networks\n");
     for (auto network: networks) {
@@ -118,21 +131,20 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
     }
 
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "Before training network performance\n");
-    #pragma omp parallel for
     for (size_t i = 0; i < num_networks; ++i) {
-        network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
-        network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
-        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
+        before_confusion_matrices[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
+        before_accuracies[i] = networks[i].calc_network_accuracy(before_confusion_matrices[i]);
+        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), before_accuracies[i]);
     }
     fmt::println(report_out, "");
 
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "After training network performance\n");
     for (size_t i = 0; i < num_networks; ++i) {
         networks[i].train(training_data, training_labels, hyperparam_set.num_epochs);
-        network_confusion_matricies[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
-        network_accuracies[i] = networks[i].calc_network_accuracy(network_confusion_matricies[i]);
+        after_confusion_matrices[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
+        after_accuracies[i] = networks[i].calc_network_accuracy(after_confusion_matrices[i]);
         networks[i].serialize(std::filesystem::path("data\\saved_nn"));
-        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), network_accuracies[i]);
+        fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), after_accuracies[i]);
     }
     auto end_time = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
@@ -146,6 +158,29 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
         fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
     );
 
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Performance Comparison\n");
+    fmt::println(report_out, "\t{}   | before %            | after %             | delta %", fmt::format(fg(fmt::terminal_color::blue), "Network"));
+    for (size_t i = 0; i < num_networks; ++i) {
+        double delta_accuracy = after_accuracies[i] - before_accuracies[i];
+        auto delta_colour = delta_accuracy > 0 ? fg(fmt::terminal_color::bright_green) : fg(fmt::terminal_color::bright_red);
+        fmt::println(report_out, "\t{:<10} | {:<19} | {:<19} | {:<19}", 
+            fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), 
+            before_accuracies[i], 
+            after_accuracies[i], 
+            fmt::format(delta_colour, "{}", delta_accuracy)
+        );
+    }
+
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Weight Analysis\n");
+    fmt::println(report_out, "\t{}   | NANs Found ", fmt::format(fg(fmt::terminal_color::blue), "Network"));
+    #pragma omp parallel for
+    for (size_t i = 0; i < num_networks; ++i) {
+        fmt::println(report_out, "\t{:<10} | {}", 
+            fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), 
+            networks[i].has_exploded_gradients()
+        );
+    }
+
     if (report_out != stdout) {
         fmt::println("{}: {}", 
             fmt::format(fg(fmt::terminal_color::yellow), "Finished training"), 
@@ -155,6 +190,9 @@ void NeuralNetworkSpecification::train_networks(const Eigen::MatrixXd& data, con
             fmt::format(fg(fmt::terminal_color::yellow), "Training took"), 
             fmt::format(fg(fmt::terminal_color::cyan), "{}", elapsed_time)
         );
+
+        fclose(report_out);
     }
+
 
 }

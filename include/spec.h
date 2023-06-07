@@ -13,6 +13,7 @@
 
 #include "network.h"
 #include "hyperparams.h"
+#include "preprocessing.h"
 
 class NeuralNetworkSpecification {
     public:
@@ -29,6 +30,7 @@ class NeuralNetworkSpecification {
         size_t data_size;
 
         HyperparamSet hyperparam_set;
+        PreprocessingSet preprocessing;
         std::string activation_function;
         std::string classification_function;
 
@@ -38,5 +40,5 @@ class NeuralNetworkSpecification {
         NeuralNetworkSpecification(toml::table spec_file);
 
         void create_networks();
-        void train_networks(const Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
+        void train_networks(Eigen::MatrixXd& data, const Eigen::VectorXd& labels);
 };

@@ -1,5 +1,6 @@
 name = "Unprocessed Data Model"
 author = "Brendan Griffiths"
+report_filepath = "data\\reports\\unprocessed.txt"
 
 [data]
 data_file = "data\\training_data.txt"
@@ -7,6 +8,9 @@ label_file = "data\\training_labels.txt"
 feature_count = 71
 label_count = 10
 size = 10000
+
+[data.preprocessing]
+pca = 0.8
 
 [network]
 structure = [71, 50, 30, 10]
