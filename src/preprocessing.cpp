@@ -1,5 +1,9 @@
 #include <tuple>
 #include <algorithm>
+#include <fstream>
+#include <filesystem>
+#include <string>
+#include <vector>
 
 #include <Eigen/Dense>
 #include <toml++/toml.h>
@@ -14,8 +18,57 @@ struct fmt::formatter<
   std::enable_if_t<
     std::is_base_of_v<Eigen::DenseBase<T>, T>, char>> : ostream_formatter {};
 
+std::vector<std::string> split_string(std::string input, std::string delimiter) {
+    std::vector<std::string> result;
+
+    size_t pos = 0;
+    std::string token;
+    while ((pos = input.find(delimiter)) != std::string::npos) {
+        token = input.substr(0, pos);
+        result.push_back(token);
+        input.erase(0, pos + delimiter.length());
+    }
+    result.push_back(input); // Add the last element
+
+    return result;
+}
+
+PreprocessingSet::PreprocessingSet() {
+    enabled_pca = false;
+}
+
 PreprocessingSet::PreprocessingSet(toml::table preprocessing_table) {
-    pca = preprocessing_table["pca"].value<double>().value_or(0.0);
+    std::string pca_matrix_filepath_str = preprocessing_table["pca_matrix_file"].value<std::string>().value_or("NONE");
+    enabled_pca = pca_matrix_filepath_str != "NONE";
+
+    if (enabled_pca) {
+        // Load the matrix
+        std::filesystem::path pca_matrix_filepath(std::filesystem::current_path()/pca_matrix_filepath_str);
+        std::ifstream pca_matrix_file(pca_matrix_filepath);
+        std::string line;
+
+        std::vector<std::vector<double>> temp_matrix(0);
+        while (!pca_matrix_file.eof()) {
+            getline(pca_matrix_file, line);
+
+            if (line == "") { break; } // reached end of file, including a blank line
+
+            std::vector<std::string> row_str = split_string(line, ",");
+            std::vector<double> row_vals(row_str.size(), 0);
+            for (size_t i = 0; i < row_str.size(); ++i) { 
+                row_vals[i] = stod(row_str[i]); 
+            }
+            temp_matrix.push_back(row_vals);
+        }
+
+
+        pca_transformation = Eigen::MatrixXd(temp_matrix.size(), temp_matrix[0].size());
+        for (size_t r = 0; r < temp_matrix.size(); ++r) {
+            for (size_t c = 0; c < temp_matrix[0].size(); ++c) {
+                pca_transformation(r, c) = temp_matrix[r][c];
+            }
+        }
+    }
 }
 
 struct eigen_t {
@@ -25,48 +78,7 @@ struct eigen_t {
     bool operator < (const eigen_t& rhs) { return value.real() > rhs.value.real(); }
 };
 
-Eigen::MatrixXd construct_pca_transformation(const Eigen::MatrixXd& data, const double energy_threshold) {
-
-    Eigen::MatrixXd centred_data = data.rowwise() - data.colwise().mean();
-    Eigen::MatrixXd cov_matrix = 1.0 / (data.cols() - 1) * centred_data.transpose() * centred_data;
-
-    Eigen::EigenSolver<Eigen::MatrixXd> solver(cov_matrix, true);
-    Eigen::MatrixXcd eigen_vecs = solver.eigenvectors();
-    Eigen::VectorXcd eigen_vals = solver.eigenvalues();
-
-    std::vector<eigen_t> eigens(eigen_vecs.cols());
-    for (size_t i = 0; i < eigen_vecs.cols(); ++i) {
-        eigens[i] = eigen_t {
-            eigen_vals(i),
-            eigen_vecs.col(i),
-        };
-    }
-
-    std::sort(eigens.begin(), eigens.end());
-    for (size_t i = 0; i < eigens.size(); ++i) {
-        eigen_vecs.col(i) = eigens[i].vec;
-        eigen_vals(i) = eigens[i].value;
-    }
-
-    Eigen::VectorXd energy_sums(eigen_vals.size());
-    for (size_t i = 0; i < eigen_vals.size(); ++i) {
-        energy_sums(i) = eigen_vals.segment(0, i + 1).real().sum();
-    }
-
-    size_t threshold_idx = eigen_vals.size() - 1;
-    double desired_energy = energy_threshold * eigen_vals.real().sum();
-    for (size_t i = 0; i < eigen_vals.size(); ++i) {
-        if (energy_sums(i) >=  desired_energy) {
-            threshold_idx = i;
-            break;
-        }
-    }
-
-    Eigen::MatrixXd pca_transformation = eigen_vecs.block(0, 0, eigen_vecs.rows(), threshold_idx + 1).real();
-    return pca_transformation;
-}
-
-Eigen::MatrixXd apply_pca_transformation(const Eigen::MatrixXd& data, const Eigen::MatrixXd& pca_transformation) {
+Eigen::MatrixXd PreprocessingSet::apply_pca_transformation(const Eigen::MatrixXd& data) {
     Eigen::MatrixXd centred_data = data.rowwise() - data.colwise().mean();
     return centred_data * pca_transformation;
 }

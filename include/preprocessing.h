@@ -7,12 +7,13 @@
 
 class PreprocessingSet {
     public: 
-        double pca;
+        bool enabled_pca;
+        Eigen::MatrixXd pca_transformation;
 
-        PreprocessingSet() : PreprocessingSet(0.0) {}
-        PreprocessingSet(double pca) : pca(pca) {}
+        PreprocessingSet();
         PreprocessingSet(toml::table preprocessing_table);
+
+        Eigen::MatrixXd apply_pca_transformation(const Eigen::MatrixXd& data);
 };
 
-Eigen::MatrixXd construct_pca_transformation(const Eigen::MatrixXd& data, const double energy_threshold);
-Eigen::MatrixXd apply_pca_transformation(const Eigen::MatrixXd& data, const Eigen::MatrixXd& pca_transformation);
+std::vector<std::string> split_string(std::string input, std::string delimiter);

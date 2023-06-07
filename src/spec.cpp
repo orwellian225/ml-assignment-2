@@ -61,7 +61,10 @@ NeuralNetworkSpecification::NeuralNetworkSpecification(toml::table spec_file) {
     std::transform(activation_function.begin(), activation_function.end(), activation_function.begin(), ::toupper);
     std::transform(classification_function.begin(), classification_function.end(), classification_function.begin(), ::toupper);
 
-    std::string id_prehash = name + author + std::to_string(num_features) + std::to_string(num_labels) + fmt::format("{}", fmt::join(structure, "")) + activation_function + classification_function;
+    std::string id_prehash = name + author + std::to_string(num_features) + std::to_string(num_labels) 
+                            + fmt::format("{}", fmt::join(structure, "")) + activation_function 
+                            + classification_function + fmt::format("{}", fmt::join(hyperparam_set.learning_rates, ""))
+                            + fmt::format("{}", fmt::join(hyperparam_set.regularisation_rates, ""));
     id = fmt::format("{:x}", std::hash<std::string>{}(id_prehash));
 }
 
@@ -81,9 +84,8 @@ void NeuralNetworkSpecification::train_networks(Eigen::MatrixXd& data, const Eig
         report_out = fopen(report_filepath.string().c_str(), "w");
     }
 
-    if (preprocessing.pca != 0.0) {
-        Eigen::MatrixXd pca_transformation = construct_pca_transformation(data, preprocessing.pca);
-        data = apply_pca_transformation(data, pca_transformation);
+    if (preprocessing.enabled_pca) {
+        data = preprocessing.apply_pca_transformation(data);
     }
 
     const size_t num_networks = networks.size();
@@ -166,6 +168,16 @@ void NeuralNetworkSpecification::train_networks(Eigen::MatrixXd& data, const Eig
             before_accuracies[i], 
             after_accuracies[i], 
             fmt::format(delta_colour, "{}", delta_accuracy)
+        );
+    }
+
+    fmt::print(report_out, fg(fmt::terminal_color::yellow), "Weight Analysis\n");
+    fmt::println(report_out, "\t{}   | NANs Found ", fmt::format(fg(fmt::terminal_color::blue), "Network"));
+    #pragma omp parallel for
+    for (size_t i = 0; i < num_networks; ++i) {
+        fmt::println(report_out, "\t{:<10} | {}", 
+            fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), 
+            networks[i].has_exploded_gradients()
         );
     }
 

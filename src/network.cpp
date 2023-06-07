@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <math.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -47,7 +48,7 @@ NeuralNetwork::NeuralNetwork(std::string id, std::vector<size_t> structure, std:
     // Init the network weights
     this->weights = {};
     for (size_t l = 0; l < layer_count - 1; ++l) {
-        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1) / 2;
+        Eigen::MatrixXd layer_weights = Eigen::MatrixXd::Random(structure[l + 1], structure[l] + 1) / 3;
         this->weights.push_back(layer_weights);
     }
 }
@@ -76,6 +77,21 @@ double NeuralNetwork::calc_network_accuracy(const Eigen::MatrixXi& confusion_mat
     double num_correct_evaluations = (double)confusion_matrix.diagonal().sum();
 
     return num_correct_evaluations / num_evaluations * 100.0;
+}
+
+bool NeuralNetwork::has_exploded_gradients() {
+
+    for (size_t l = 0; l < weights.size(); ++l) {
+        for (size_t r = 0; r < weights[l].rows(); ++r) {
+            for (size_t c = 0; c < weights[l].cols(); ++c) {
+                if (std::isnan(weights[l](r, c)) || std::isinf(weights[l](r, c))) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 size_t NeuralNetwork::eval(const Eigen::VectorXd& input) {
