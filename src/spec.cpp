@@ -143,7 +143,7 @@ void NeuralNetworkSpecification::train_networks(Eigen::MatrixXd& data, const Eig
         networks[i].train(training_data, training_labels, hyperparam_set.num_epochs);
         after_confusion_matrices[i] = networks[i].calc_confusion_matrix(validation_data, validation_labels);
         after_accuracies[i] = networks[i].calc_network_accuracy(after_confusion_matrices[i]);
-        networks[i].serialize(std::filesystem::path("data\\saved_nn"));
+        networks[i].serialize(std::filesystem::path("data/saved_nn"));
         fmt::println(report_out, "\t{} | {} ", fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), after_accuracies[i]);
     }
     auto end_time = std::chrono::system_clock::now();
