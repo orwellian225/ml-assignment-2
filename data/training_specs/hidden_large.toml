@@ -1,0 +1,25 @@
+name = "Submission Spec - Hidden Large"
+author = "Brendan Griffiths, Ashlea Smith, Nihal Ranchod"
+report_filepath = "data/reports/hidden_large.txt"
+
+[data]
+data_file = "data/training_data.txt"
+label_file = "data/training_labels.txt"
+feature_count = 71
+label_count = 10
+size = 10000
+
+[data.preprocessing]
+pca_matrix_file = "data/pca_matrix.txt"
+
+[network]
+structure = [53, 40, 10]
+activation_f = "Relu"
+classification_f = "Softmax"
+
+[network.hyperparameters]
+learning_rates = [0.001, 0.01, 0.05, 0.1, 1.0]
+regularisation_rates = [0.5, 1.0, 2.0, 3.0]
+convergence_criteria = 0.000001
+batch_size = 200
+num_epochs = 10000
