@@ -2,10 +2,10 @@ import numpy as np
 import data_ops as do
 import network
 
-data_filepath = "testdata.txt"
-pca_filepath = "pca_matrix.txt"
-network_filepath = "c8e0b7c-6.nnw"
-output_filepath = "testlabels.txt"
+data_filepath = "./scripts/testdata.txt"
+pca_filepath = "./scripts/pca_matrix.txt"
+network_filepath = "./scripts/c8e0b7c-6.nnw"
+output_filepath = "./scripts/testlabels.txt"
 
 def main():
     data = do.read_data(data_filepath)
