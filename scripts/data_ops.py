@@ -77,3 +77,19 @@ def read_data(data_filepath: str, show_log=False) -> np.array:
 
     data_file.close()
     return feature_matrix
+
+def read_matrix(matrix_filepath: str) -> np.array:
+    matrix_file = open(matrix_filepath, 'r')
+
+    matrix = []
+
+    matrix_count = sum(1 for _ in matrix_file)
+    matrix_file.seek(0)
+
+    for i in range(matrix_count):
+        matrix_line = matrix_file.readline().strip()
+        matrix_row = matrix_line.split(",")
+        matrix.append(matrix_row)
+
+    matrix_file.close()
+    return np.array(matrix).astype(np.float64) 

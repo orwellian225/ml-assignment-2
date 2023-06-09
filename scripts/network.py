@@ -9,6 +9,13 @@ network_functions = {
 }
 
 class NeuralNetwork:
+    def __str__(self):
+        result = ""
+        for w in self.weights:
+            result += str(w) + "\n"
+
+        return result
+
     def __init__(self, nn_filepath: str) -> None:
         """ FILE FORMAT
         num_features,num_labels,activation_function,classification_function

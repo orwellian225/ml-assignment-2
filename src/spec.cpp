@@ -91,9 +91,9 @@ void NeuralNetworkSpecification::train_networks(Eigen::MatrixXd& data, const Eig
     const size_t num_networks = networks.size();
     const size_t num_data = data.rows();
 
-    const size_t size_training_data = num_data * 0.8;
-    const size_t size_validation_data = num_data * 0.1;
-    const size_t size_testing_data = num_data * 0.1;
+    const size_t size_training_data = num_data * 0.9;
+    const size_t size_validation_data = num_data * 0.05;
+    const size_t size_testing_data = num_data * 0.05;
 
     assert(size_training_data + size_validation_data + size_testing_data == num_data);
 
@@ -173,7 +173,6 @@ void NeuralNetworkSpecification::train_networks(Eigen::MatrixXd& data, const Eig
 
     fmt::print(report_out, fg(fmt::terminal_color::yellow), "Weight Analysis\n");
     fmt::println(report_out, "\t{}   | NANs Found ", fmt::format(fg(fmt::terminal_color::blue), "Network"));
-    #pragma omp parallel for
     for (size_t i = 0; i < num_networks; ++i) {
         fmt::println(report_out, "\t{:<10} | {}", 
             fmt::format(fg(fmt::terminal_color::blue), "{}", networks[i].id), 
